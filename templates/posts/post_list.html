@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ru">  <!-- Язык страницы -->
+<head>
+    <meta charset="UTF-8">
+    <title>Список изделий SPMS</title>  <!-- Заголовок вкладки -->
+    
+    <!-- Простые стили для красивого отображения -->
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 20px;
+            background-color: #f9f9f9;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .product {
+            background: white;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .product-id {
+            font-weight: bold;
+            color: #0066cc;
+        }
+        .product-description {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Список изделий (SPMS)</h1>  <!-- Главный заголовок страницы -->
+    
+    <!-- Блок с изделиями -->
+    <div class="product-list">
+        {% for product in products %}  <!-- Цикл по изделиям из контекста -->
+            <div class="product">
+                <!-- Номер и название изделия -->
+                <span class="product-id">SPMS-{{ product.id }}</span>: {{ product.name }}
+                <!-- Описание изделия -->
+                <p class="product-description">{{ product.description }}</p>
+            </div>
+        {% empty %}  <!-- Если список изделий пуст -->
+            <p>Нет изделий для отображения.</p>
+        {% endfor %}
+    </div>
+</body>
+</html>
