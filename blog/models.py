@@ -39,7 +39,7 @@ class ConformityAssessment(models.Model):
 
 class Post(models.Model):
     name = models.CharField(max_length=100)
-    desig_product = models.CharField(max_length=50)
+    design_product = models.CharField(max_length=50)
     author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_posts')
     last_editor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='edited_posts')
     current_responsible = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='responsible_posts')
@@ -62,6 +62,10 @@ class Post(models.Model):
     service = models.OneToOneField(Service, on_delete=models.SET_NULL, null=True, blank=True)
     patenting = models.ManyToManyField(Patenting, blank=True)
     conformity_assessment = models.OneToOneField(ConformityAssessment, on_delete=models.SET_NULL, null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Разработку"
+        verbose_name_plural = "Разработка"
 
     def __str__(self):
         return self.name
