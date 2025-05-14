@@ -7,6 +7,6 @@ class TechnicalProposalAdmin(admin.ModelAdmin):
     list_display = ['name', 'author', 'date_of_creation']
 
 
-admin.site.register(Post)
+admin.register(Post)
 class PostAdmin(admin.ModelAdmin):
-    list_display = ('name', 'desig_product', 'author', 'date_of_creation')  
+    list_display = ('name', 'design_product', 'author', 'date_of_creation')  
