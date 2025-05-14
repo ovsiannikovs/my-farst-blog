@@ -69,3 +69,42 @@ class Post(models.Model):
 
     def __str__(self):
         return self.name
+
+
+# Новая сущность "Программа" (TechnicalProposal)
+class TechnicalProposal(models.Model):
+    name = models.CharField(max_length=200, unique=True)
+    author = models.ForeignKey(User, related_name='tp_created_by', on_delete=models.SET_NULL, null=True)
+    date_of_creation = models.DateTimeField(auto_now_add=True)
+    last_editor = models.ForeignKey(User, related_name='tp_last_edited_by', on_delete=models.SET_NULL, null=True)
+    date_of_change = models.DateTimeField(auto_now=True)
+    current_responsible = models.ForeignKey(User, related_name='tp_current_responsible', on_delete=models.SET_NULL, null=True)
+    version = models.CharField(max_length=20, blank=True)
+    version_diff = models.TextField(max_length=1000, blank=True)
+    litera = models.CharField(max_length=20, default='П-')
+    trl = models.CharField(max_length=10, default='1-')
+
+    # Пример связей (заглушки, можно заменить на реальные модели)
+    list_technical_proposal = models.CharField(max_length=255, blank=True, null=True)
+    general_drawing_product = models.CharField(max_length=255, blank=True, null=True)
+    electronic_model_product = models.CharField(max_length=255, blank=True, null=True)
+    general_electrical_circuit = models.CharField(max_length=255, blank=True, null=True)
+    product_software = models.CharField(max_length=255, blank=True, null=True)
+    report_technical_proposal = models.CharField(max_length=255, blank=True, null=True)
+    protocol_technical_proposal = models.CharField(max_length=255, blank=True, null=True)
+
+    # One-to-many
+    general_drawing_unit = models.JSONField(blank=True, null=True)
+    electronic_model_unit = models.JSONField(blank=True, null=True)
+    drawing_part_unit = models.JSONField(blank=True, null=True)
+    electronic_model_part_unit = models.JSONField(blank=True, null=True)
+    drawing_part_product = models.JSONField(blank=True, null=True)
+    electronic_model_part_product = models.JSONField(blank=True, null=True)
+    add_report_technical_proposal = models.JSONField(blank=True, null=True)
+
+    class Meta:
+        verbose_name = "Техническое предложение"
+        verbose_name_plural = "Технические предложения"
+
+    def __str__(self):
+        return self.name
