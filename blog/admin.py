@@ -1,12 +1,12 @@
 from django.contrib import admin
-from .models import Post
-from .models import TechnicalProposal
+from .models import Post, TechnicalProposal
 
-admin.register(TechnicalProposal)
+# Правильная регистрация TechnicalProposal
+@admin.register(TechnicalProposal)
 class TechnicalProposalAdmin(admin.ModelAdmin):
     list_display = ['name', 'author', 'date_of_creation']
 
-
-admin.site.register(Post)
+# Правильная регистрация Post
+@admin.register(Post)
 class PostAdmin(admin.ModelAdmin):
-    list_display = ('name', 'desig_product', 'author', 'date_of_creation')  
+    list_display = ('name', 'design_product', 'author', 'date_of_creation')
