@@ -1,0 +1,22 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Регистрация</title>
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
+</head>
+<body>
+    <h2>Регистрация</h2>
+
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Зарегистрироваться</button>
+    </form>
+
+    <hr>
+    <p>Уже есть аккаунт? <a href="{% url 'login' %}">Войти</a></p>
+    <p><a href="/admin/">Перейти в админку</a></p>
+</body>
+</html>

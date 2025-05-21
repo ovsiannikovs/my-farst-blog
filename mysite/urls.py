@@ -16,7 +16,34 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
+from django.contrib import admin
+from django.urls import path
+from django.contrib.auth import views as auth_views
+from django.shortcuts import render, redirect
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth import login
+from django.conf import settings
+from django.conf.urls.static import static
+
+def register(request):
+    if request.method == 'POST':
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            login(request, user)
+            return redirect('home')  # или куда перенаправить
+    else:
+        form = UserCreationForm()
+    return render(request, 'registration/register.html', {'form': form})
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('register/', register, name='register'),  # маршрут регистрации
+    path('login/', auth_views.LoginView.as_view(), name='login'),  # если нужно логин
+    path('logout/', auth_views.LogoutView.as_view(), name='logout'),  # и логаут
 ]
+
+from django.conf import settings
+from django.conf.urls.static import static
+
+urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

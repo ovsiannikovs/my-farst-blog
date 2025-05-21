@@ -2,7 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 
 
-# 🔧 Заглушки / вспомогательные модели
+# Заглушки / вспомогательные модели
 class TechnicalAssignment(models.Model):
     title = models.CharField(max_length=255)
     def __str__(self): return self.title
@@ -48,7 +48,7 @@ class ConformityAssessment(models.Model):
     def __str__(self): return self.title
 
 
-# ✅ Модель Post
+# Модель Post
 class Post(models.Model):
     name = models.CharField(max_length=100)
     design_product = models.CharField(max_length=50)
@@ -83,7 +83,7 @@ class Post(models.Model):
         return self.name
 
 
-# ✅ Вспомогательные сущности для TechnicalProposal
+# Вспомогательные сущности для TechnicalProposal
 class GeneralDrawingProduct(models.Model):
     name = models.CharField(max_length=255)
     def __str__(self): return self.name
@@ -141,7 +141,7 @@ class ListTechnicalProposal(models.Model):
     def __str__(self): return self.name
 
 
-# ✅ Основная модель TechnicalProposal
+# Основная модель TechnicalProposal
 class TechnicalProposal(models.Model):
     name = models.CharField(max_length=200, unique=True)
     author = models.ForeignKey(User, related_name='tp_created_by', on_delete=models.SET_NULL, null=True)
@@ -167,7 +167,7 @@ class TechnicalProposal(models.Model):
     drawing_part_unit = models.ManyToManyField(DrawingPartUnit, blank=True)
     electronic_model_part_unit = models.ManyToManyField(ElectronicModelPartUnit, blank=True)
     drawing_part_product = models.ManyToManyField(DrawingPartProduct, blank=True)
-    electronic_model_part_product = models.ManyToManyField(ElectronicModelPartProduct, blank=True)
+    electronic_model_part_product =  models.ManyToManyField(ElectronicModelPartProduct, blank=True)
     add_report_technical_proposal = models.ManyToManyField(AddReportTechnicalProposal, blank=True)
 
     class Meta:
