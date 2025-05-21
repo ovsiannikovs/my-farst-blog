@@ -141,7 +141,7 @@ class ListTechnicalProposal(models.Model):
     def __str__(self): return self.name
 
 
-# Основная модель TechnicalProposal
+# Модель TechnicalProposal
 class TechnicalProposal(models.Model):
     name = models.CharField(max_length=200, unique=True)
     author = models.ForeignKey(User, related_name='tp_created_by', on_delete=models.SET_NULL, null=True)
