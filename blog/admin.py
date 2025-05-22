@@ -1,6 +1,6 @@
 from django.contrib import admin
-from .models import Post
 from .models import TechnicalProposal
+from .models import Post
 
 # Правильная регистрация TechnicalProposal
 @admin.register(TechnicalProposal)
