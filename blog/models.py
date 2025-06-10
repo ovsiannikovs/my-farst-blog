@@ -2,10 +2,6 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
 
-<<<<<<< HEAD
-
-=======
->>>>>>> recovery_branch
 # Заглушки / вспомогательные модели
 class TechnicalAssignment(models.Model):
     title = models.CharField(max_length=255)
@@ -1028,11 +1024,4 @@ class TechnicalProposal(models.Model):
         verbose_name = "Техническое предложение"
         verbose_name_plural = "Технические предложения"
 
-    def __str__(self):
-<<<<<<< HEAD
-        return self.name
-=======
-        return self.name
-
-
->>>>>>> recovery_branch
+    def __str__(self): return self.name
