@@ -2,7 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
 
-# Заглушки / вспомогательные модели
+# Заглушки / вспомогательные м
 class TechnicalAssignment(models.Model):
     title = models.CharField(max_length=255)
     def __str__(self): return self.title
@@ -64,6 +64,7 @@ class Post(models.Model):
 
     # Связи
     technical_assignments = models.ManyToManyField(TechnicalAssignment, blank=True)
+    technical_proposal = models.OneToOneField('TechnicalProposal', on_delete=models.SET_NULL, blank=True, null=True, related_name='Post', verbose_name='Техническое предложение (литера П)')
     design_documentation = models.OneToOneField(DesignDocumentation, on_delete=models.SET_NULL, null=True, blank=True)
     working_documentation = models.OneToOneField(WorkingDocumentation, on_delete=models.SET_NULL, null=True, blank=True)
     pilot_samples = models.OneToOneField(PilotSample, on_delete=models.SET_NULL, null=True, blank=True)
