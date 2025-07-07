@@ -23,11 +23,11 @@ from .models import ProtocolTechnicalProposal
 @admin.register(TechnicalProposal)
 class TechnicalProposalAdmin(admin.ModelAdmin):
     list_display = ['name', 'author', 'date_of_creation']
-
+    readonly_fields = ('date_of_creation', 'date_of_change')
 
 @admin.register(Post)
 class PostAdmin(admin.ModelAdmin):
-    list_display = ('name', 'design_product', 'author', 'date_of_creation')  
+   list_display = ('name', 'design_product', 'author', 'date_of_creation', 'date_of_change')
 
 @admin.register(ListTechnicalProposal)
 class ListTechnicalProposalAdmin(admin.ModelAdmin):
@@ -198,7 +198,7 @@ class ElectronicModelPartProductAdmin(admin.ModelAdmin):
 @admin.register(ReportTechnicalProposal)
 class ReportTechnicalProposalAdmin(admin.ModelAdmin):
     list_display = (
-        'id', 'name', 'desig_document', 'category', 'status', 'version',
+        'id', 'name', 'category', 'status', 'version',
         'trl', 'author', 'current_responsible', 'date_of_creation'
     )
     list_filter = ('category', 'status', 'trl', 'date_of_creation')
@@ -212,7 +212,6 @@ class AddReportTechnicalProposalAdmin(admin.ModelAdmin):
     list_display = (
         'id',
         'name',
-        'desig_document',
         'category',
         'status',
         'version',

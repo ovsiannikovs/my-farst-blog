@@ -7,9 +7,13 @@ class TechnicalAssignment(models.Model):
     title = models.CharField(max_length=255)
     def __str__(self): return self.title
 
-class DesignDocumentation(models.Model):
+class technical_design(models.Model):
     title = models.CharField(max_length=255)
     def __str__(self): return self.title
+
+class prelim_design(models.Model):
+    title = models.CharField(max_length=255)
+    def __str__(self): return self.title    
 
 class WorkingDocumentation(models.Model):
     title = models.CharField(max_length=255)
@@ -50,22 +54,32 @@ class ConformityAssessment(models.Model):
 
 # Модель Post
 class Post(models.Model):
+    LITERA_CHOICES = [
+        ('П-', 'П-'),
+        ('П', 'П'),
+    ]
+
+    TRL_CHOICES = [
+        ('1-', '1-'),
+        ('1', '1'),
+    ]
     name = models.CharField(max_length=100)
     design_product = models.CharField(max_length=50)
     author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_posts')
     last_editor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='edited_posts')
     current_responsible = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='responsible_posts')
-    date_of_creation = models.DateTimeField(auto_now_add=True)
-    date_of_change = models.DateTimeField(auto_now=True)
-    version = models.CharField(max_length=20)
-    version_diff = models.TextField(max_length=1000, blank=True)
-    litera = models.CharField(max_length=20)
-    trl = models.CharField(max_length=10)
+    date_of_creation = models.DateTimeField(default=timezone.now)
+    date_of_change = models.DateTimeField(default=timezone.now)
+    version = models.CharField(max_length=20, default='1')
+    version_diff = models.TextField(max_length=1000, blank=True, default='Стартовая версия')
+    litera = models.CharField(max_length=20, choices=LITERA_CHOICES, default='П-')
+    trl = models.CharField(max_length=10, choices=TRL_CHOICES, default='1-')
 
     # Связи
     technical_assignments = models.ManyToManyField(TechnicalAssignment, blank=True)
     technical_proposal = models.OneToOneField('TechnicalProposal', on_delete=models.SET_NULL, blank=True, null=True, related_name='Post', verbose_name='Техническое предложение (литера П)')
-    design_documentation = models.OneToOneField(DesignDocumentation, on_delete=models.SET_NULL, null=True, blank=True)
+    prelim_design = models.OneToOneField(prelim_design, on_delete=models.SET_NULL, null=True, blank=True)
+    technical_design = models.OneToOneField(technical_design, on_delete=models.SET_NULL, null=True, blank=True)
     working_documentation = models.OneToOneField(WorkingDocumentation, on_delete=models.SET_NULL, null=True, blank=True)
     pilot_samples = models.OneToOneField(PilotSample, on_delete=models.SET_NULL, null=True, blank=True)
     procurement = models.ManyToManyField(Procurement, blank=True)
@@ -86,25 +100,9 @@ class Post(models.Model):
 
 # Вспомогательные сущности для TechnicalProposal
 class GeneralDrawingProduct(models.Model):
-    CATEGORY_CHOICES = [
-    ('ВПТ', 'Ведомость технического предложения'),
-    ('ВО', 'Чертеж общего вида изделия'),
-    ('ЭМИ', 'Электронная модель изделия'),
-    ('Э6', 'Схема электрическая общая'),
-    ('ПО ПТ', 'Программное обеспечение. Техническое предложение'),
-    ('ВО СЕ', 'Чертеж общего вида сборочной единицы'),
-    ('ЭМ СЕ', 'Электронная модель сборочной единицы'),
-    ('ЧД СЕ', 'Чертеж детали сборочной единицы'),
-    ('ЭМД СЕ', 'Электронная модель детали сборочной единицы'),
-    ('ЧД ВО', 'Чертеж детали изделия'),
-    ('ЭМД ВО', 'Электронная модель детали изделия'),
-    ('ПЗ ПТ', 'Пояснительная записка. Техническое предложение'),
-    ('ПЗ ПТ. Приложение', 'Пояснительная записка. Техническое предложение. Приложение'),
-    ('Протокол ПТ', 'Протокол. Техническое предложение'),
-]
 
 
-    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, default='ВО')
+    category = models.CharField(max_length=50, default='ВО')
     name = models.CharField(max_length=100, default='ПАК СПМ 2.13 Чертеж общего вида изделия')
     desig_document = models.CharField(max_length=50, default='СИ.40522001.000.13ВО')
     info_format = models.CharField(max_length=20, default='ДЭ')
@@ -120,8 +118,8 @@ class GeneralDrawingProduct(models.Model):
     status = models.CharField(max_length=50, default='На согласовании')
     priority = models.CharField(max_length=30, blank=True, default='')
     approval_cycle = models.PositiveSmallIntegerField(default=0)
-    version = models.CharField(max_length=6, default='v1.0')
-    version_diff = models.TextField(max_length=1000, blank=True, default='')
+    version = models.CharField(max_length=6, default='1.0')
+    version_diff = models.TextField(max_length=1000, blank=True, default='Стартовая версия')
     litera = models.CharField(max_length=20, default='П-')
     trl = models.CharField(max_length=10, default='1-')
     validity_date = models.DateField(null=True, blank=True)
@@ -131,18 +129,17 @@ class GeneralDrawingProduct(models.Model):
     language = models.CharField(max_length=10, blank=True, default='rus')
     uploaded_file = models.FileField(upload_to='uploads/', default=0)
 
+    class Meta:
+        verbose_name = 'Чертеж общего вида изделия'
+        verbose_name_plural = 'Чертежи общего вида изделия'
     def __str__(self):
         return self.name
     def __str__(self): return self.name
 
 class ElectronicModelProduct(models.Model):
-    CATEGORY_CHOICES = [
-        ('ВПТ', 'Ведомость технического предложения'),
-        ('ВО', 'Чертеж общего вида изделия'),
-        ('ЭМИ', 'Электронная модель изделия'),
-    ]
 
     STATUS_CHOICES = [
+        ('Зарегистрирован', 'Зарегистрирован'),
         ('Рабочий вариант', 'Рабочий вариант'),
         ('Разработка', 'Разработка'),
         ('Проверка', 'Проверка'),
@@ -172,7 +169,7 @@ class ElectronicModelProduct(models.Model):
         ('1', '1'), ('2-', '2-'), ('2', '2'), ('3-', '3-'), ('3', '3'),
     ]
 
-    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, default='ЭМИ')
+    category = models.CharField(max_length=50, default='ЭМИ')
     name = models.CharField(max_length=100, default='ПАК СПМ 2.13 Электронная модель изделия')
     desig_document = models.CharField(max_length=50, unique=True, default='СИ.40522001.000.13ЭМИ')
     info_format = models.CharField(max_length=20, default='ДЭ')
@@ -185,11 +182,11 @@ class ElectronicModelProduct(models.Model):
     last_editor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='electronicmodel_last_editor')
     date_of_change = models.DateTimeField(default=timezone.now)
     current_responsible = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='electronicmodel_responsible')
-    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='Рабочий вариант')
+    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='Зарегистрирован')
     priority = models.CharField(max_length=30, choices=PRIORITY_CHOICES, blank=True, default='')
     approval_cycle = models.IntegerField(default=0)
-    version = models.CharField(max_length=6, default='v1.0')
-    version_diff = models.TextField(blank=True, default='')
+    version = models.CharField(max_length=6, default='1.0')
+    version_diff = models.TextField(blank=True, default='Стартовая версия')
     litera = models.CharField(max_length=20, default='П-')
     trl = models.CharField(max_length=10, choices=TRL_CHOICES, default='1-')
     validity_date = models.DateField(null=True, blank=True)
@@ -202,22 +199,21 @@ class ElectronicModelProduct(models.Model):
 
     uploaded_file = models.FileField(upload_to='uploads/', default=0)
 
+    class Meta:
+        verbose_name = 'Электронная модель продукта'
+        verbose_name_plural = 'Электронные модели продукта'
     def __str__(self):
         return self.name
 
 class GeneralElectricalDiagram(models.Model):
-    CATEGORY_CHOICES = [
-        ('Э6', 'Схема электрическая общая'),
-    ]
 
     INFO_FORMAT_CHOICES = [
         ('ДЭ', 'ДЭ'),
-        ('ДЭ КД', 'ДЭ КД'),
-        ('ТДЭ', 'ТДЭ'),
-        ('ДБ КД', 'ДБ КД'),
+        ('ДБ', 'ДБ'),
     ]
 
     STATUS_CHOICES = [
+        ('Зарегистрирован', 'Зарегистрирован'),
         ('Рабочий вариант', 'Рабочий вариант'),
         ('Разработка', 'Разработка'),
         ('Проверка', 'Проверка'),
@@ -243,7 +239,7 @@ class GeneralElectricalDiagram(models.Model):
         ('Низкий', 'Низкий'),
     ]
 
-    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, default='Э6')
+    category = models.CharField(max_length=50, default='Э6')
     name = models.CharField(max_length=100, default='ПАК СПМ 2.13 Схема электрическая общая')
     desig_document = models.CharField(max_length=50, unique=True, default='СИ.40522001.000.13Э6')
     info_format = models.CharField(max_length=20, choices=INFO_FORMAT_CHOICES, default='ДЭ')
@@ -256,11 +252,11 @@ class GeneralElectricalDiagram(models.Model):
     last_editor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+')
     date_of_change = models.DateTimeField(default=timezone.now)
     current_responsible = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+')
-    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='На согласовании')
+    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='Зарегистрирован')
     priority = models.CharField(max_length=30, choices=PRIORITY_CHOICES, blank=True, default='')
     approval_cycle = models.PositiveSmallIntegerField(default=0)
-    version = models.CharField(max_length=6, default='v1.0')
-    version_diff = models.TextField(blank=True, default='')
+    version = models.CharField(max_length=6, default='1.0')
+    version_diff = models.TextField(blank=True, default='Стартовая версия')
     litera = models.CharField(max_length=2, default='П-')
     trl = models.CharField(max_length=10, default='1-')
     validity_date = models.DateField(null=True, blank=True)
@@ -271,15 +267,16 @@ class GeneralElectricalDiagram(models.Model):
     language = models.CharField(max_length=10, default='rus')
     uploaded_file = models.FileField(upload_to='uploads/', default=0)
 
+    class Meta:
+        verbose_name = 'Схема электрическая общая'
+        verbose_name_plural = 'Схемы электрические общие'
     def __str__(self):
         return self.name
 
 class SoftwareProduct(models.Model):
-    CATEGORY_CHOICES = [
-        ('ПО ПТ', 'Программное обеспечение. Техническое предложение'),
-    ]
 
     STATUS_CHOICES = [
+        ('Зарегистрирован', 'Зарегистрирован'),
         ('Рабочий вариант', 'Рабочий вариант'),
         ('Разработка', 'Разработка'),
         ('Проверка', 'Проверка'),
@@ -299,7 +296,7 @@ class SoftwareProduct(models.Model):
     ]
 
     id = models.AutoField(primary_key=True)
-    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, default='ПО ПТ')
+    category = models.CharField(max_length=50, default='ПО ПТ')
     name = models.CharField(max_length=100, default='ПАК СПМ 2.13  Программное обеспечение. Техническое предложение')
     desig_document = models.CharField(max_length=50, unique=True, default='СИ.40522001.000.13ПО ПТ')
     info_format = models.CharField(max_length=30, default='ДЭ')
@@ -312,11 +309,11 @@ class SoftwareProduct(models.Model):
     last_editor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='software_last_editor')
     date_of_change = models.DateTimeField(default=timezone.now)
     current_responsible = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='software_responsible')
-    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='Рабочий вариант')
+    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='Зарегистрирован')
     priority = models.CharField(max_length=30, blank=True, default='')
     approval_cycle = models.PositiveSmallIntegerField(default=0)
-    version = models.CharField(max_length=6, default='v1.0')
-    version_diff = models.TextField(max_length=1000, blank=True, default='')
+    version = models.CharField(max_length=6, default='1.0')
+    version_diff = models.TextField(max_length=1000, blank=True, default='Стартовая версия')
     litera = models.CharField(max_length=20, default='П-')
     trl = models.CharField(max_length=10, default='1-')
     validity_date = models.DateField(null=True, blank=True)
@@ -327,19 +324,18 @@ class SoftwareProduct(models.Model):
     language = models.CharField(max_length=10, default='rus')
     uploaded_file = models.FileField(upload_to='uploads/', default=0)
 
+    class Meta:
+        verbose_name = 'Программное обеспечение Технического предложения'
+        verbose_name_plural = 'Программные обеспечения Технического предложения'
     def __str__(self):
         return self.name
 
 class ReportTechnicalProposal(models.Model):
     id = models.BigAutoField(primary_key=True, unique=True)
-    
-    CATEGORY_CHOICES = [
-        ("ПЗ ПТ", "Пояснительная записка. Техническое предложение"),
-    ]
-    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, default="ПЗ ПТ")
+
+    category = models.CharField(max_length=50, default="ПЗ ПТ")
 
     name = models.CharField(max_length=100)
-    desig_document = models.CharField(max_length=50, unique=True, null=True, blank=True)
 
     INFO_FORMAT_CHOICES = [
         ("ДБ", "ДБ КД"),
@@ -360,6 +356,7 @@ class ReportTechnicalProposal(models.Model):
     current_responsible = models.ForeignKey(User, related_name='report_technical_proposal_responsibles', on_delete=models.SET_NULL, null=True)
 
     STATUS_CHOICES = [
+        ('Зарегистрирован', 'Зарегистрирован'),
         ('Рабочий вариант', 'Рабочий вариант'),
         ('Разработка', 'Разработка'),
         ('Проверка', 'Проверка'),
@@ -377,7 +374,7 @@ class ReportTechnicalProposal(models.Model):
         ('На пересмотре', 'На пересмотре'),
         ('Архив', 'Архив'),
     ]
-    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='Рабочий вариант')
+    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='Зарегистрирован')
 
     PRIORITY_CHOICES = [
         ('Срочно', 'Срочно'),
@@ -388,8 +385,8 @@ class ReportTechnicalProposal(models.Model):
     priority = models.CharField(max_length=30, blank=True, null=True, choices=PRIORITY_CHOICES)
 
     approval_cycle = models.PositiveSmallIntegerField(default=0)
-    version = models.CharField(max_length=6, default='v1.0')
-    version_diff = models.TextField(max_length=1000, blank=True, null=True)
+    version = models.CharField(max_length=6, default='1.0')
+    version_diff = models.TextField(max_length=1000, blank=True, null=True, default='Стартовая версия')
 
     litera = models.CharField(max_length=20, default='П-', editable=False)
 
@@ -432,6 +429,9 @@ class ReportTechnicalProposal(models.Model):
     permission = models.CharField(max_length=2, choices=PERMISSION_LEVEL_CHOICES, default='7')
     uploaded_file = models.FileField(upload_to='uploads/', default=0)
 
+    class Meta:
+        verbose_name = 'Пояснительна записка Технического предложения'
+        verbose_name_plural = 'Пояснительные записки Технического предложения'
     def __str__(self):
         return self.name or f"Пояснительная записка {self.desig_document}"
 
@@ -461,8 +461,8 @@ class ProtocolTechnicalProposal(models.Model):
     status = models.CharField(max_length=30, default='На согласовании')
     priority = models.CharField(max_length=30, blank=True)
     approval_cycle = models.PositiveSmallIntegerField(default=0)
-    version = models.CharField(max_length=6, default='v1.0')
-    version_diff = models.TextField(max_length=1000, blank=True)
+    version = models.CharField(max_length=6, default='1.0')
+    version_diff = models.TextField(max_length=1000, blank=True,default='Стартовая версия')
 
     litera = models.CharField(max_length=20, default='П-', editable=False)
     trl = models.CharField(max_length=10, default='1-')
@@ -488,14 +488,13 @@ class ProtocolTechnicalProposal(models.Model):
         return f"{self.name} — {self.version}"
 
 class GeneralDrawingUnit(models.Model):
-    CATEGORY_CHOICES = [
-        ('ВО СЕ', 'Чертеж общего вида сборочной единицы'),
-    ]
+
     INFO_FORMAT_CHOICES = [
-        ('ДЭ КД', 'Электронный конструкторский документ'),
-        ('ДЭ', 'Электронный документ'),
+        ('ДБ', 'ДБ'),
+        ('ДЭ', 'ДЭ'),
     ]
     STATUS_CHOICES = [
+        ('Зарегистрирован', 'Зарегистрирован'),
         ('Рабочий вариант', 'Рабочий вариант'),
         ('Разработка', 'Разработка'),
         ('Проверка', 'Проверка'),
@@ -524,7 +523,7 @@ class GeneralDrawingUnit(models.Model):
     ACCESS_LEVEL_CHOICES = [('О', 'общий'), ('К', 'конфиденциально'), ('С', 'секретно'), ('СС', 'совершенно секретно')]
 
     technical_proposal = models.ForeignKey('TechnicalProposal', on_delete=models.CASCADE, related_name='general_drawing_units')
-    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, default='ВО СЕ')
+    category = models.CharField(max_length=50, default='ВО СЕ')
     name = models.CharField(max_length=100)
     desig_document = models.CharField(max_length=50, unique=True)
     info_format = models.CharField(max_length=20, choices=INFO_FORMAT_CHOICES, default='ДЭ')
@@ -537,11 +536,11 @@ class GeneralDrawingUnit(models.Model):
     last_editor = models.ForeignKey(User, on_delete=models.PROTECT, related_name='+')
     date_of_change = models.DateTimeField(auto_now=True)
     current_responsible = models.ForeignKey(User, on_delete=models.PROTECT, related_name='+')
-    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='Рабочий вариант')
+    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='Зарегистрирован')
     priority = models.CharField(max_length=30, choices=PRIORITY_CHOICES, blank=True, null=True)
     approval_cycle = models.PositiveSmallIntegerField(default=0)
-    version = models.CharField(max_length=6, default='v1.0')
-    version_diff = models.TextField(blank=True)
+    version = models.CharField(max_length=6, default='1.0')
+    version_diff = models.TextField(blank=True, default='Стартовая версия')
     litera = models.CharField(max_length=2, default='П-')
     trl = models.CharField(max_length=10, choices=TRL_CHOICES, default='1-')
     validity_date = models.DateField(blank=True, null=True)
@@ -554,18 +553,20 @@ class GeneralDrawingUnit(models.Model):
     access_level = models.CharField(max_length=30, choices=ACCESS_LEVEL_CHOICES, default='О')
     uploaded_file = models.FileField(upload_to='uploads/', default=0)
 
+    class Meta:
+        verbose_name = 'Чертеж общего вида сборочной единицы'
+        verbose_name_plural = 'Чертежи общего вида сборочной еденицы'
     def __str__(self):
         return self.name
 
 class ElectronicModelUnit(models.Model):
-    CATEGORY_CHOICES = [
-        ('ЭМ СЕ', 'Электронная модель сборочной единицы'),
-    ]
+
     INFO_FORMAT_CHOICES = [
         ('ДЭ КД', 'Электронный конструкторский документ'),
         ('ДЭ', 'Электронный документ'),
     ]
     STATUS_CHOICES = [
+        ('Зарегистрирован', 'Зарегистрирован'),
         ('Рабочий вариант', 'Рабочий вариант'),
         ('Разработка', 'Разработка'),
         ('Проверка', 'Проверка'),
@@ -594,7 +595,7 @@ class ElectronicModelUnit(models.Model):
     ACCESS_LEVEL_CHOICES = [('О', 'общий'), ('К', 'конфиденциально'), ('С', 'секретно'), ('СС', 'совершенно секретно')]
 
     technical_proposal = models.ForeignKey('TechnicalProposal', on_delete=models.CASCADE, related_name='electronic_model_units', null=True)
-    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, default='ЭМ СЕ')
+    category = models.CharField(max_length=50, default='ЭМ СЕ')
     name = models.CharField(max_length=100, default='Узел 1 Электронная модель сборочной единицы')
     desig_document = models.CharField(max_length=50, unique=True, default=1)
     info_format = models.CharField(max_length=20, choices=INFO_FORMAT_CHOICES, default='ДЭ')
@@ -607,11 +608,11 @@ class ElectronicModelUnit(models.Model):
     last_editor = models.ForeignKey(User, on_delete=models.PROTECT, related_name='+', default=1)
     date_of_change = models.DateTimeField(auto_now=True)
     current_responsible = models.ForeignKey(User, on_delete=models.PROTECT, related_name='+', default=1)
-    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='Рабочий вариант')
+    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='Зарегистрирован')
     priority = models.CharField(max_length=30, choices=PRIORITY_CHOICES, blank=True, null=True)
     approval_cycle = models.PositiveSmallIntegerField(default=0)
-    version = models.CharField(max_length=6, default='v1.0')
-    version_diff = models.TextField(blank=True, default='')
+    version = models.CharField(max_length=6, default='1.0')
+    version_diff = models.TextField(blank=True, default='Стартовая версия')
     litera = models.CharField(max_length=2, default='П-')
     trl = models.CharField(max_length=10, choices=TRL_CHOICES, default='1-')
     validity_date = models.DateField(blank=True, null=True)
@@ -624,15 +625,16 @@ class ElectronicModelUnit(models.Model):
     access_level = models.CharField(max_length=30, choices=ACCESS_LEVEL_CHOICES, default='О')
     uploaded_file = models.FileField(upload_to='uploads/', default=0)
 
+    class Meta:
+        verbose_name = 'Электронная модель сборочной единицы'
+        verbose_name_plural = 'Электронные модели сборочной единицы'
     def __str__(self):
         return self.name
 
 
 
 class DrawingPartUnit(models.Model):
-    CATEGORY_CHOICES = [
-        ('ЧД СЕ', 'Чертеж детали сборочной единицы'),
-    ]
+
     INFO_FORMAT_CHOICES = [
         ('ДЭ КД', 'Электронный конструкторский документ'),
         ('ДЭ', 'Электронный документ'),
@@ -644,6 +646,7 @@ class DrawingPartUnit(models.Model):
         ('Низкий', 'Низкий'),
     ]
     STATUS_CHOICES = [
+        ('Зарегистрирован', 'Зарегистрирован'),
         ('Рабочий вариант', 'Рабочий вариант'),
         ('Разработка', 'Разработка'),
         ('Проверка', 'Проверка'),
@@ -663,7 +666,7 @@ class DrawingPartUnit(models.Model):
     ]
 
     id = models.BigAutoField(primary_key=True)
-    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='ЧД СЕ')
+    category = models.CharField(max_length=20, default='ЧД СЕ')
     name = models.CharField(max_length=100)
     desig_document = models.CharField(max_length=50, unique=True, default='1')
     info_format = models.CharField(max_length=10, choices=INFO_FORMAT_CHOICES, default='ДЭ')
@@ -676,11 +679,11 @@ class DrawingPartUnit(models.Model):
     last_editor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='drawing_partunit_editor')
     date_of_change = models.DateTimeField(default=timezone.now)
     current_responsible = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='drawing_partunit_responsible')
-    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='На согласовании')
+    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='Зарегистрирован')
     priority = models.CharField(max_length=30, choices=PRIORITY_CHOICES, blank=True, null=True)
     approval_cycle = models.PositiveSmallIntegerField(default=0)
-    version = models.CharField(max_length=6, default='v1.0')
-    version_diff = models.TextField(max_length=1000, blank=True)
+    version = models.CharField(max_length=6, default='1.0')
+    version_diff = models.TextField(max_length=1000, blank=True, default='Стартовая версия')
     litera = models.CharField(max_length=2, default='П-')
     trl = models.CharField(max_length=10, default='1-')
     validity_date = models.DateField(blank=True, null=True)
@@ -692,6 +695,9 @@ class DrawingPartUnit(models.Model):
     technical_proposal = models.ForeignKey('TechnicalProposal', on_delete=models.CASCADE, related_name='drawing_part_units', null=True)
     uploaded_file = models.FileField(upload_to='uploads/', default=0)
 
+    class Meta:
+        verbose_name = 'Чертеж детали сборочной единицы'
+        verbose_name_plural = 'Чертежи детали сборочной единицы'
     def __str__(self):
         return self.name
 
@@ -713,8 +719,8 @@ class ElectronicModelPartUnit(models.Model):
     status = models.CharField(max_length=50, default='На согласовании')
     priority = models.CharField(max_length=30, blank=True, null=True)
     approval_cycle = models.PositiveSmallIntegerField(default=0)
-    version = models.CharField(max_length=6, default='v1.0')
-    version_diff = models.TextField(blank=True, null=True)
+    version = models.CharField(max_length=6, default='1.0')
+    version_diff = models.TextField(blank=True, null=True, default='Стартовая версия')
     litera = models.CharField(max_length=20, default='П-')
     trl = models.CharField(max_length=10, default='1-')
     validity_date = models.DateField(blank=True, null=True)
@@ -734,9 +740,7 @@ class ElectronicModelPartUnit(models.Model):
         return f"{self.desig_document} — {self.name}"
 
 class DrawingPartProduct(models.Model):
-    CATEGORY_CHOICES = [
-        ("ЧД ВО", "Чертеж детали изделия"),
-    ]
+
     INFO_FORMAT_CHOICES = [
         ("ДЭ", "ДЭ"),
         ("ДЭ КД", "ДЭ КД"),
@@ -744,9 +748,23 @@ class DrawingPartProduct(models.Model):
         ("ДБ КД", "ДБ КД"),
     ]
     STATUS_CHOICES = [
-        ("Рабочий вариант", "Рабочий вариант"),
-        ("На согласовании", "На согласовании"),
-        # и другие статусы
+        ('Зарегистрирован', 'Зарегистрирован'),
+        ('Рабочий вариант', 'Рабочий вариант'),
+        ('Разработка', 'Разработка'),
+        ('Проверка', 'Проверка'),
+        ('Проверен', 'Проверен'),
+        ('На согласовании', 'На согласовании'),
+        ('Согласован', 'Согласован'),
+        ('На утверждении', 'На утверждении'),
+        ('Утвержден', 'Утвержден'),
+        ('Отклонен', 'Отклонен'),
+        ('Выпущен', 'Выпущен'),
+        ('Заморожен', 'Заморожен'),
+        ('Заменен', 'Заменен'),
+        ('Заблокирован', 'Заблокирован'),
+        ('Аннулирован', 'Аннулирован'),
+        ('На пересмотре', 'На пересмотре'),
+        ('Архив', 'Архив'),
     ]
     PRIORITY_CHOICES = [
         ("Срочно", "Срочно"),
@@ -764,7 +782,7 @@ class DrawingPartProduct(models.Model):
         ("СС", "Совершенно секретно"),
     ]
 
-    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, default="ЧД ВО")
+    category = models.CharField(max_length=50, default="ЧД ВО")
     name = models.CharField(max_length=100)
     desig_document = models.CharField(max_length=50, unique=True, default=1)
     info_format = models.CharField(max_length=10, choices=INFO_FORMAT_CHOICES, default="ДЭ")
@@ -777,11 +795,11 @@ class DrawingPartProduct(models.Model):
     last_editor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name="drawing_part_product_editors")
     date_of_change = models.DateTimeField(auto_now=True)
     current_responsible = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name="drawing_part_product_responsibles")
-    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default="Рабочий вариант")
+    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default="Зарегистрирован")
     priority = models.CharField(max_length=30, choices=PRIORITY_CHOICES, blank=True)
     approval_cycle = models.PositiveSmallIntegerField(default=0)
-    version = models.CharField(max_length=6, default="v1.0")
-    version_diff = models.TextField(blank=True)
+    version = models.CharField(max_length=6, default="1.0")
+    version_diff = models.TextField(blank=True, default='Стартовая версия')
     litera = models.CharField(max_length=20, default="П-")
     trl = models.CharField(max_length=10, choices=TRL_CHOICES, default="1-")
     validity_date = models.DateField(null=True, blank=True)
@@ -793,6 +811,9 @@ class DrawingPartProduct(models.Model):
     access_level = models.CharField(max_length=10, choices=ACCESS_LEVEL_CHOICES, default="О")
     uploaded_file = models.FileField(upload_to='uploads/', default=0)
 
+    class Meta:
+        verbose_name = 'Чертеж детали изделия'
+        verbose_name_plural = 'Чертежи детали изделия'
     def __str__(self):
         return f"{self.desig_document} — {self.name}"
 
@@ -815,8 +836,8 @@ class ElectronicModelPartProduct(models.Model):
     status = models.CharField(max_length=30, default="Рабочий вариант")
     priority = models.CharField(max_length=30, blank=True)
     approval_cycle = models.PositiveSmallIntegerField(default=0)
-    version = models.CharField(max_length=6, default="v1.0")
-    version_diff = models.TextField(blank=True)
+    version = models.CharField(max_length=6, default="1.0")
+    version_diff = models.TextField(blank=True, default='Стартовая версия')
     litera = models.CharField(max_length=20, default="П-")
     trl = models.CharField(max_length=10, default="1-")
     validity_date = models.DateField(null=True, blank=True)
@@ -827,25 +848,22 @@ class ElectronicModelPartProduct(models.Model):
     language = models.CharField(max_length=10, default="rus", blank=True)
     uploaded_file = models.FileField(upload_to='uploads/', default=0)
 
+    class Meta:
+        verbose_name = 'Электронная модель детали изделия'
+        verbose_name_plural = 'Электронные модели детали изделия'
     def __str__(self):
         return f"{self.desig_document} — {self.name}"
 
 class AddReportTechnicalProposal(models.Model):
     id = models.BigAutoField(primary_key=True, unique=True)
 
-    CATEGORY_CHOICES = [
-        ("ПЗ ПТ. Приложение", "Пояснительная записка. Техническое предложение. Приложение"),
-    ]
-    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, default="ПЗ ПТ. Приложение")
+    category = models.CharField(max_length=50, default="ПЗ ПТ. Приложение")
 
     name = models.CharField(max_length=100)
-
-    desig_document = models.CharField(max_length=50, unique=True, null=True, blank=True)
 
     INFO_FORMAT_CHOICES = [
         ("ДБ", "ДБ КД"),
         ("ДЭ", "ДЭ КД"),
-        ("ТДЭ", "ТДЭ"),
     ]
     info_format = models.CharField(max_length=10, choices=INFO_FORMAT_CHOICES, default="ДЭ", blank=True)
 
@@ -862,6 +880,7 @@ class AddReportTechnicalProposal(models.Model):
     uploaded_file = models.FileField(upload_to='uploads/', default=0)
 
     STATUS_CHOICES = [
+        ('Зарегистрирован', 'Зарегистрирован'),
         ('Рабочий вариант', 'Рабочий вариант'),
         ('Разработка', 'Разработка'),
         ('Проверка', 'Проверка'),
@@ -879,7 +898,7 @@ class AddReportTechnicalProposal(models.Model):
         ('На пересмотре', 'На пересмотре'),
         ('Архив', 'Архив'),
     ]
-    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='Рабочий вариант')
+    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='Зарегистрирован')
 
     PRIORITY_CHOICES = [
         ('Срочно', 'Срочно'),
@@ -890,8 +909,8 @@ class AddReportTechnicalProposal(models.Model):
     priority = models.CharField(max_length=30, blank=True, null=True, choices=PRIORITY_CHOICES)
 
     approval_cycle = models.PositiveSmallIntegerField(default=0)
-    version = models.CharField(max_length=6, default='v1.0')
-    version_diff = models.TextField(max_length=1000, blank=True, null=True)
+    version = models.CharField(max_length=6, default='1.0')
+    version_diff = models.TextField(max_length=1000, blank=True, null=True, default='Стартовая версия')
 
     litera = models.CharField(max_length=20, default='П-', editable=False)
     trl = models.CharField(max_length=10, default='1-', editable=False)
@@ -932,23 +951,22 @@ class AddReportTechnicalProposal(models.Model):
     ]
     permission = models.CharField(max_length=2, choices=PERMISSION_LEVEL_CHOICES, default='7')
 
+    class Meta:
+        verbose_name = 'Добавить пояснительная записка Технического предложения'
+        verbose_name_plural = 'Добавить пояснительные записки Технического предложения'
+
     def __str__(self):
         return self.name or f"ПЗ ПТ. Приложение {self.desig_document or self.id}"
 
 class ListTechnicalProposal(models.Model):
-    CATEGORY_CHOICES = [
-        ('ВПТ', 'Ведомость технического предложения'),
-        ('ВО', 'Чертеж общего вида изделия'),
-        ('ЭМИ', 'Электронная модель изделия'),
-    ]
 
     INFO_FORMAT_CHOICES = [
-        ('ДБ КД', 'Бумажный КД'),
-        ('ДЭ КД', 'Электронный КД'),
-        ('ТДЭ', 'Текстовый электронный документ'),
+        ('ДБ', 'ДБ'),
+        ('ДЭ', 'ДЭ'),
     ]
 
     STATUS_CHOICES = [
+        ('Зарегистрирован', 'Зарегистрирован'),
         ('Рабочий вариант', 'Рабочий вариант'),
         ('Разработка', 'Разработка'),
         ('На согласовании', 'На согласовании'),
@@ -962,11 +980,11 @@ class ListTechnicalProposal(models.Model):
         ('Низкий', 'Низкий'),
     ]
 
-    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, default='ВПТ')
-    name = models.CharField(max_length=100, default='Ведомость ТП')
+
+    category = models.CharField(max_length=50, default='ВПТ')
+    name = models.CharField(max_length=150)#, editable=False)
     desig_document = models.CharField(max_length=50, unique=True, default=1)
     info_format = models.CharField(max_length=20, choices=INFO_FORMAT_CHOICES, default='ДЭ')
-    primary_use = models.CharField(max_length=100, default='Нет данных')
     change_number = models.CharField(max_length=20, default='Изм. 0')
     file = models.CharField(max_length=50, default='Файл не указан')
     application = models.CharField(max_length=50, default='Приложение не указано')
@@ -975,11 +993,11 @@ class ListTechnicalProposal(models.Model):
     last_editor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='edited_list_tp')
     date_of_change = models.DateTimeField(default=timezone.now)
     current_responsible = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='responsible_list_tp')
-    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='Рабочий вариант')
+    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='Зарегистрирован')
     priority = models.CharField(max_length=30, choices=PRIORITY_CHOICES, blank=True, default='')
     approval_cycle = models.PositiveSmallIntegerField(default=0)
-    version = models.CharField(max_length=6, default='v1.0')
-    version_diff = models.TextField(blank=True, default='')
+    version = models.CharField(max_length=6, default='1.0')
+    version_diff = models.TextField(blank=True, default='Стартовая версия')
     litera = models.CharField(max_length=20, default='П-')
     trl = models.CharField(max_length=10, default='1-')
     validity_date = models.DateField(null=True, blank=True)
@@ -989,29 +1007,46 @@ class ListTechnicalProposal(models.Model):
     language = models.CharField(max_length=10, default='rus')
     uploaded_file = models.FileField(upload_to='uploads/', default=0)
 
-    def __str__(self): return self.name
+    class Meta:
+        verbose_name = 'Ведомость технического предложения'
+        verbose_name_plural = 'Ведомости технического предложения'
+
+    #def __str__(self):
+      #  if self.technical_proposal and self.technical_proposal.post:
+        #    return f"{self.technical_proposal.post.name} {self.category}"
+        #return self.name
 
 
 # Модель TechnicalProposal
 class TechnicalProposal(models.Model):
+
+    LITERA_CHOICES = [
+        ('П-', 'П-'),
+        ('П', 'П'),
+    ]
+
+    TRL_CHOICES = [
+        ('1-', '1-'),
+        ('1', '1'),
+    ]
     name = models.CharField(max_length=200, unique=True)
     author = models.ForeignKey(User, related_name='tp_created_by', on_delete=models.SET_NULL, null=True)
-    date_of_creation = models.DateTimeField(auto_now_add=True)
+    date_of_creation = models.DateTimeField(default=timezone.now)
     last_editor = models.ForeignKey(User, related_name='tp_last_edited_by', on_delete=models.SET_NULL, null=True)
-    date_of_change = models.DateTimeField(auto_now=True)
+    date_of_change = models.DateTimeField(default=timezone.now)
     current_responsible = models.ForeignKey(User, related_name='tp_current_responsible', on_delete=models.SET_NULL, null=True)
-    version = models.CharField(max_length=20, blank=True)
-    version_diff = models.TextField(max_length=1000, blank=True)
-    litera = models.CharField(max_length=20, default='П-')
-    trl = models.CharField(max_length=10, default='1-')
+    version = models.CharField(max_length=20, blank=True, default='1')
+    version_diff = models.TextField(max_length=1000, blank=True, default='Стартовая версия')
+    litera = models.CharField(max_length=20, choices=LITERA_CHOICES, default='П-')
+    trl = models.CharField(max_length=10, choices=TRL_CHOICES, default='1-')
 
-    list_technical_proposal = models.OneToOneField(ListTechnicalProposal, on_delete=models.SET_NULL, null=True, blank=True)
+    list_technical_proposal = models.OneToOneField(ListTechnicalProposal, on_delete=models.SET_NULL, null=True)
     general_drawing_product = models.OneToOneField(GeneralDrawingProduct, on_delete=models.SET_NULL, null=True, blank=True)
     electronic_model_product = models.OneToOneField(ElectronicModelProduct, on_delete=models.SET_NULL, null=True, blank=True)
     general_electrical_diagram = models.OneToOneField(GeneralElectricalDiagram, on_delete=models.SET_NULL, null=True, blank=True)
     software_product = models.OneToOneField(SoftwareProduct, on_delete=models.SET_NULL, null=True, blank=True)
-    report_technical_proposal = models.OneToOneField(ReportTechnicalProposal, on_delete=models.SET_NULL, null=True, blank=True)
-    protocol_technical_proposal = models.OneToOneField(ProtocolTechnicalProposal, on_delete=models.SET_NULL, null=True, blank=True)
+    report_technical_proposal = models.OneToOneField(ReportTechnicalProposal, on_delete=models.SET_NULL, null=True)
+    protocol_technical_proposal = models.OneToOneField(ProtocolTechnicalProposal, on_delete=models.SET_NULL, null=True)
 
     general_drawing_unit = models.ManyToManyField(GeneralDrawingUnit, blank=True)
     electronic_model_unit = models.ManyToManyField(ElectronicModelUnit, blank=True)
