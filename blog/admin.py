@@ -10,14 +10,12 @@ from .models import GeneralDrawingUnit
 from .models import ElectronicModelUnit
 from .models import DrawingPartUnit
 from .models import ElectronicModelPartUnit
-from .models import DrawingPartProduct 
+from .models import DrawingPartProduct
 from .models import ElectronicModelPartProduct
 from .models import ReportTechnicalProposal
 from .models import AddReportTechnicalProposal
 from .models import ProtocolTechnicalProposal
-
-
-
+from crm.models import Notifications, Customer, Decision_maker, Deal, Prouct, Deal_stage
 
 
 @admin.register(TechnicalProposal)
@@ -25,52 +23,61 @@ class TechnicalProposalAdmin(admin.ModelAdmin):
     list_display = ['name', 'author', 'date_of_creation']
     readonly_fields = ('date_of_creation', 'date_of_change')
 
+
 @admin.register(Post)
 class PostAdmin(admin.ModelAdmin):
-   list_display = ('name', 'design_product', 'author', 'date_of_creation', 'date_of_change')
+    list_display = ('name', 'design_product', 'author', 'date_of_creation', 'date_of_change')
+
 
 @admin.register(ListTechnicalProposal)
 class ListTechnicalProposalAdmin(admin.ModelAdmin):
     list_display = ['name', 'category', 'desig_document', 'status', 'date_of_creation']
     search_fields = ['name', 'desig_document']
 
+
 @admin.register(GeneralDrawingProduct)
 class GeneralDrawingProductAdmin(admin.ModelAdmin):
     list_display = (
-        'name','desig_document','category','author','date_of_creation','status','version',
+        'name', 'desig_document', 'category', 'author', 'date_of_creation', 'status', 'version',
     )
     search_fields = ('name', 'desig_document')
     list_filter = ('category', 'status', 'trl', 'litera')
 
+
 @admin.register(ElectronicModelProduct)
 class ElectronicModelProductAdmin(admin.ModelAdmin):
     list_display = (
-        'name','desig_document','author','date_of_creation','status','version','trl',
+        'name', 'desig_document', 'author', 'date_of_creation', 'status', 'version', 'trl',
     )
     search_fields = ('name', 'desig_document')
     list_filter = ('status', 'trl', 'category', 'develop_org')
 
+
 @admin.register(GeneralElectricalDiagram)
 class GeneralElectricalDiagramAdmin(admin.ModelAdmin):
     list_display = (
-        'name','desig_document','author','date_of_creation','status','version',
+        'name', 'desig_document', 'author', 'date_of_creation', 'status', 'version',
     )
     search_fields = ('name', 'desig_document', 'author__username')
-    list_filter = ('status', 'trl', 'develop_org', 'language')    
+    list_filter = ('status', 'trl', 'develop_org', 'language')
+
 
 @admin.register(SoftwareProduct)
 class SoftwareProductAdmin(admin.ModelAdmin):
     list_display = ('id', 'name', 'category', 'desig_document', 'status', 'version', 'date_of_creation')
     search_fields = ('name', 'desig_document', 'status')
-    list_filter = ('status', 'category', 'trl', 'version')    
+    list_filter = ('status', 'category', 'trl', 'version')
+
 
 @admin.register(GeneralDrawingUnit)
 class GeneralDrawingUnitAdmin(admin.ModelAdmin):
-    list_display = ('name', 'desig_document', 'status', 'version', 'technical_proposal')    
+    list_display = ('name', 'desig_document', 'status', 'version', 'technical_proposal')
+
 
 @admin.register(ElectronicModelUnit)
 class ElectronicModelUnitAdmin(admin.ModelAdmin):
     list_display = ('name', 'desig_document', 'status', 'version', 'technical_proposal')
+
 
 @admin.register(DrawingPartUnit)
 class DrawingPartUnitAdmin(admin.ModelAdmin):
@@ -113,7 +120,8 @@ class DrawingPartUnitAdmin(admin.ModelAdmin):
                 'date_of_creation', 'date_of_change', 'pattern'
             )
         }),
-    )  
+    )
+
 
 @admin.register(ElectronicModelPartUnit)
 class ElectronicModelPartUnitAdmin(admin.ModelAdmin):
@@ -151,7 +159,8 @@ class ElectronicModelPartUnitAdmin(admin.ModelAdmin):
         ('Временные метки', {
             'fields': ('date_of_creation', 'date_of_change')
         }),
-    )   
+    )
+
 
 @admin.register(DrawingPartProduct)
 class DrawingPartProductAdmin(admin.ModelAdmin):
@@ -176,7 +185,8 @@ class DrawingPartProductAdmin(admin.ModelAdmin):
         if not change:
             obj.author = request.user
         obj.last_editor = request.user
-        super().save_model(request, obj, form, change) 
+        super().save_model(request, obj, form, change)
+
 
 @admin.register(ElectronicModelPartProduct)
 class ElectronicModelPartProductAdmin(admin.ModelAdmin):
@@ -193,7 +203,8 @@ class ElectronicModelPartProductAdmin(admin.ModelAdmin):
         if not obj.pk:
             obj.author = request.user
         obj.last_editor = request.user
-        super().save_model(request, obj, form, change)          
+        super().save_model(request, obj, form, change)
+
 
 @admin.register(ReportTechnicalProposal)
 class ReportTechnicalProposalAdmin(admin.ModelAdmin):
@@ -206,6 +217,7 @@ class ReportTechnicalProposalAdmin(admin.ModelAdmin):
     readonly_fields = (
         'date_of_creation', 'date_of_change', 'author', 'last_editor'
     )
+
 
 @admin.register(AddReportTechnicalProposal)
 class AddReportTechnicalProposalAdmin(admin.ModelAdmin):
@@ -256,7 +268,8 @@ class AddReportTechnicalProposalAdmin(admin.ModelAdmin):
                 'date_of_change',
             )
         }),
-    )   
+    )
+
 
 @admin.register(ProtocolTechnicalProposal)
 class ProtocolTechnicalProposalAdmin(admin.ModelAdmin):
@@ -275,4 +288,42 @@ class ProtocolTechnicalProposalAdmin(admin.ModelAdmin):
         if not obj.pk:
             obj.author = request.user
         obj.last_editor = request.user
-        super().save_model(request, obj, form, change)     
+        super().save_model(request, obj, form, change)
+
+
+class CustomerAdmin(admin.ModelAdmin):
+    list_display = ('name_of_company', 'revenue_for_last_year', 'length_of_electrical_network_km')
+    list_filter = ('name_of_company', 'revenue_for_last_year')  # Фильтры в правой части
+    search_fields = ('name_of_company', 'address')  # Поиск по этим полям
+
+
+class Decision_makerAdmin(admin.ModelAdmin):
+    list_display = ('full_name', 'city_of_location', 'function', 'customer')
+    list_filter = ('city_of_location', 'function', 'customer')
+    search_fields = ('full_name', 'phone_number', 'email')
+
+
+class DealAdmin(admin.ModelAdmin):
+    list_display = ('customer', 'start_date', 'status', 'deal_amount')
+    list_filter = ('customer', 'start_date', 'customer')
+    search_fields = ('customer__name_of_company', 'description')
+    date_hierarchy = 'start_date'  # Иерархия по дате
+
+
+class ProductAdmin(admin.ModelAdmin):
+    list_display = ('name_of_product', 'end_customer_price')
+    list_filter = ('name_of_product',)
+    search_fields = ('name_of_product', 'description')
+
+
+class Deal_stageAdmin(admin.ModelAdmin):
+    list_display = ('deal', 'start_date_step', 'status')
+    list_filter = ('status', 'deal')
+    search_fields = ('deal__customer__name_of_company', 'description_of_task_at_stage')
+
+admin.site.register(Customer, CustomerAdmin)
+admin.site.register(Decision_maker, Decision_makerAdmin)
+admin.site.register(Deal, DealAdmin)
+admin.site.register(Prouct, ProductAdmin)
+admin.site.register(Deal_stage, Deal_stageAdmin)
+admin.site.register(Notifications)
