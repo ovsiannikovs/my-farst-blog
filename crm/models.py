@@ -49,9 +49,9 @@ class Decision_maker(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='лпр_листы', verbose_name='Заказчик')
     full_name = models.CharField(max_length=255, verbose_name='ФИО')
     city_of_location = models.CharField(max_length=100, verbose_name='Город местонахождения')
-    function = models.IntegerField(choices=TypeOfFunction.choices, default=TypeOfFunction.DIRECTOR)
+    function = models.IntegerField(choices=TypeOfFunction.choices, default=TypeOfFunction.DIRECTOR, verbose_name='Роль')
     phone_number = models.CharField(max_length=20, verbose_name='Телефон')
-    email = models.EmailField(max_length=54, blank=True, unique=True, verbose_name='Почта')
+    email = models.EmailField(max_length=54, blank=True, null=True, verbose_name='Почта')
     telegram = models.CharField(max_length=50, blank=True, null=True, verbose_name='Телеграм')
     description_and_impression = models.TextField(blank=True, null=True, verbose_name='Описание и впечатления')
 
@@ -102,7 +102,7 @@ class Deal(models.Model):
     deal_amount = models.DecimalField(max_digits=15, decimal_places=2, verbose_name='Сумма сделки')
     quantity_of_all_product = models.PositiveIntegerField(default=1, verbose_name='Количество всех продуктов, шт')
     description = models.TextField(blank=True, null=True, verbose_name='Описание')
-    shipping_address = models.TextField(verbose_name='Адрес отгрузки')
+    shipping_address = models.TextField(verbose_name='Адрес отгрузки', blank=True, null=True)
     responsible_manager = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Ответственный менеджер')
 
     def __str__(self):

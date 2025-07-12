@@ -291,9 +291,40 @@ class ProtocolTechnicalProposalAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
 
 
+class RevenueRangeFilter(admin.SimpleListFilter):
+    title = 'Выручка'
+    parameter_name = 'revenue_range'
+
+    def lookups(self, request, model_admin):
+        return [
+            ('<100', 'до 100 млрд'),
+            ('100-500', '100–500 млрд'),
+            ('>500', 'более 500 млрд'),
+        ]
+
+    def queryset(self, request, queryset):
+        def parse(value):
+            try:
+                return float(value.replace(',', '.'))
+            except:
+                return 0
+
+        if self.value() == '<100':
+            return queryset.filter(revenue_for_last_year__lt='100')
+        elif self.value() == '100-500':
+            return queryset.filter(
+                revenue_for_last_year__gte='100',
+                revenue_for_last_year__lte='500'
+            )
+        elif self.value() == '>500':
+            return queryset.filter(revenue_for_last_year__gt='500')
+        return queryset
+
+
 class CustomerAdmin(admin.ModelAdmin):
     list_display = ('name_of_company', 'revenue_for_last_year', 'length_of_electrical_network_km')
     list_filter = ('name_of_company', 'revenue_for_last_year')  # Фильтры в правой части
+    list_filter = (RevenueRangeFilter,)
     search_fields = ('name_of_company', 'address')  # Поиск по этим полям
 
 
