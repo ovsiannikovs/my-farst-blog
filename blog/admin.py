@@ -15,7 +15,7 @@ from .models import ElectronicModelPartProduct
 from .models import ReportTechnicalProposal
 from .models import AddReportTechnicalProposal
 from .models import ProtocolTechnicalProposal
-from crm.models import Notifications, Customer, Decision_maker, Deal, Prouct, Deal_stage
+from crm.models import Notifications, Customer, Decision_maker, Deal, Product, Deal_stage, Call, Letter
 
 
 @admin.register(TechnicalProposal)
@@ -352,9 +352,25 @@ class Deal_stageAdmin(admin.ModelAdmin):
     list_filter = ('status', 'deal')
     search_fields = ('deal__customer__name_of_company', 'description_of_task_at_stage')
 
+
+@admin.register(Call)
+class CallAdmin(admin.ModelAdmin):
+    list_display = ('customer', 'decision_maker', 'planned_date', 'responsible', 'deal')
+    search_fields = ('call_goal', 'call_result')
+    list_filter = ('planned_date',)
+    date_hierarchy = 'planned_date'
+
+
+@admin.register(Letter)
+class LetterAdmin(admin.ModelAdmin):
+    list_display = ('incoming_number', 'customer', 'planned_date', 'responsible', 'deal')
+    search_fields = ('incoming_number', 'responsible_person_from_customer')
+    list_filter = ('planned_date',)
+    date_hierarchy = 'planned_date'
+
 admin.site.register(Customer, CustomerAdmin)
 admin.site.register(Decision_maker, Decision_makerAdmin)
 admin.site.register(Deal, DealAdmin)
-admin.site.register(Prouct, ProductAdmin)
+admin.site.register(Product, ProductAdmin)
 admin.site.register(Deal_stage, Deal_stageAdmin)
 admin.site.register(Notifications)

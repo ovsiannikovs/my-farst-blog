@@ -64,7 +64,7 @@ class Decision_maker(models.Model):
         ordering = ['full_name']
 
 
-class Prouct(models.Model):
+class Product(models.Model):
     name_of_product = models.CharField(max_length=255, verbose_name='Название')
     end_customer_price = models.DecimalField(max_digits=12, decimal_places=2, verbose_name='Цена для конечного заказчика')
     description = models.TextField(blank=True, null=True, verbose_name='Описание')
@@ -98,7 +98,7 @@ class Deal(models.Model):
     date_of_last_change = models.DateTimeField(auto_now=True, verbose_name='Дата последнего изменения')
     date_of_next_activity = models.DateField(verbose_name='Дата следующей активности')
     status = models.CharField(max_length=50, choices=SELECTION, verbose_name='Состояние')
-    name_of_product = models.ForeignKey(Prouct, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Продукт')
+    name_of_product = models.ForeignKey(Product, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Продукт')
     deal_amount = models.DecimalField(max_digits=15, decimal_places=2, verbose_name='Сумма сделки')
     quantity_of_all_product = models.PositiveIntegerField(default=1, verbose_name='Количество всех продуктов, шт')
     description = models.TextField(blank=True, null=True, verbose_name='Описание')
@@ -133,3 +133,40 @@ class Deal_stage(models.Model):
         verbose_name = 'Этап сделки'
         verbose_name_plural = 'Этапы сделки'
         ordering = ['start_date_step']
+
+class Call(models.Model):
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, verbose_name='Заказчик')
+    decision_maker = models.ForeignKey(Decision_maker, on_delete=models.CASCADE, verbose_name='ЛПР')
+    responsible = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Ответственный')
+    planned_date = models.DateField(verbose_name='Плановая дата')
+    call_goal = models.CharField(max_length=200, verbose_name='Описание цели звонка')
+    call_result = models.CharField(max_length=200, verbose_name='Описание результата', blank=True, null=True)
+    deal = models.ForeignKey(Deal, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Сделка (если есть)')
+
+    def __str__(self):
+        return f"Звонок по {self.customer.name_of_company} от {self.planned_date}"
+
+    class Meta:
+        verbose_name = 'Звонок'
+        verbose_name_plural = 'Звонки'
+        ordering = ['-planned_date']
+
+
+class Letter(models.Model):
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, verbose_name='Заказчик')
+    decision_maker = models.ForeignKey(Decision_maker, on_delete=models.CASCADE, verbose_name='ЛПР')
+    responsible = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Ответственный')
+    planned_date = models.DateField(verbose_name='Плановая дата')
+    letter_file = models.FileField(upload_to='letters/', verbose_name='Тело письма')
+    incoming_number = models.CharField(max_length=50, verbose_name='Входящий номер заказчика')
+    incoming_date = models.DateField(verbose_name='Входящая дата заказчика')
+    responsible_person_from_customer = models.CharField(max_length=100, verbose_name='Ответственный от заказчика')
+    deal = models.ForeignKey(Deal, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Сделка')
+
+    def __str__(self):
+        return f"Письмо №{self.incoming_number} от {self.customer.name_of_company}"
+
+    class Meta:
+        verbose_name = 'Письмо'
+        verbose_name_plural = 'Письма'
+        ordering = ['-planned_date']
