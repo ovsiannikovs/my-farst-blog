@@ -15,6 +15,7 @@ from .models import ElectronicModelPartProduct
 from .models import ReportTechnicalProposal
 from .models import AddReportTechnicalProposal
 from .models import ProtocolTechnicalProposal
+from crm.models import Notifications, Customer, Decision_maker, Deal, Product, Deal_stage, Call, Letter
 from .models import TechTask
 from .models import (
     OKRTask,
@@ -291,7 +292,91 @@ class ProtocolTechnicalProposalAdmin(admin.ModelAdmin):
         if not obj.pk:
             obj.author = request.user
         obj.last_editor = request.user
-        super().save_model(request, obj, form, change)     
+        super().save_model(request, obj, form, change)    
+
+class RevenueRangeFilter(admin.SimpleListFilter):
+    title = 'Выручка'
+    parameter_name = 'revenue_range'
+
+    def lookups(self, request, model_admin):
+        return [
+            ('<100', 'до 100 млрд'),
+            ('100-500', '100–500 млрд'),
+            ('>500', 'более 500 млрд'),
+        ]
+
+    def queryset(self, request, queryset):
+        def parse(value):
+            try:
+                return float(value.replace(',', '.'))
+            except:
+                return 0
+
+        if self.value() == '<100':
+            return queryset.filter(revenue_for_last_year__lt='100')
+        elif self.value() == '100-500':
+            return queryset.filter(
+                revenue_for_last_year__gte='100',
+                revenue_for_last_year__lte='500'
+            )
+        elif self.value() == '>500':
+            return queryset.filter(revenue_for_last_year__gt='500')
+        return queryset
+
+
+class CustomerAdmin(admin.ModelAdmin):
+    list_display = ('name_of_company', 'revenue_for_last_year', 'length_of_electrical_network_km')
+    list_filter = ('name_of_company', 'revenue_for_last_year')  # Фильтры в правой части
+    list_filter = (RevenueRangeFilter,)
+    search_fields = ('name_of_company', 'address')  # Поиск по этим полям
+
+
+class Decision_makerAdmin(admin.ModelAdmin):
+    list_display = ('full_name', 'city_of_location', 'function', 'customer')
+    list_filter = ('city_of_location', 'function', 'customer')
+    search_fields = ('full_name', 'phone_number', 'email')
+
+
+class DealAdmin(admin.ModelAdmin):
+    list_display = ('customer', 'start_date', 'status', 'deal_amount')
+    list_filter = ('customer', 'start_date', 'customer')
+    search_fields = ('customer__name_of_company', 'description')
+    date_hierarchy = 'start_date'  # Иерархия по дате
+
+
+class ProductAdmin(admin.ModelAdmin):
+    list_display = ('name_of_product', 'end_customer_price')
+    list_filter = ('name_of_product',)
+    search_fields = ('name_of_product', 'description')
+
+
+class Deal_stageAdmin(admin.ModelAdmin):
+    list_display = ('deal', 'start_date_step', 'status')
+    list_filter = ('status', 'deal')
+    search_fields = ('deal__customer__name_of_company', 'description_of_task_at_stage')
+
+
+@admin.register(Call)
+class CallAdmin(admin.ModelAdmin):
+    list_display = ('customer', 'decision_maker', 'planned_date', 'responsible', 'deal')
+    search_fields = ('call_goal', 'call_result')
+    list_filter = ('planned_date',)
+    date_hierarchy = 'planned_date'
+
+
+@admin.register(Letter)
+class LetterAdmin(admin.ModelAdmin):
+    list_display = ('incoming_number', 'customer', 'planned_date', 'responsible', 'deal')
+    search_fields = ('incoming_number', 'responsible_person_from_customer')
+    list_filter = ('planned_date',)
+    date_hierarchy = 'planned_date'
+
+admin.site.register(Customer, CustomerAdmin)
+admin.site.register(Decision_maker, Decision_makerAdmin)
+admin.site.register(Deal, DealAdmin)
+admin.site.register(Product, ProductAdmin)
+admin.site.register(Deal_stage, Deal_stageAdmin)
+admin.site.register(Notifications) 
 
 @admin.register(OKRTask)
 class OKRTaskAdmin(admin.ModelAdmin):
