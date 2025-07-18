@@ -15,7 +15,7 @@ from .models import ElectronicModelPartProduct
 from .models import ReportTechnicalProposal
 from .models import AddReportTechnicalProposal
 from .models import ProtocolTechnicalProposal
-from crm.models import Notifications, Customer, Decision_maker, Deal, Product, Deal_stage, Call, Letter
+from crm.models import Notifications, Customer, Decision_maker, Deal, Product, Deal_stage, Call, Letter, Company_branch
 from .models import TechTask
 from .models import (
     OKRTask,
@@ -370,6 +370,13 @@ class LetterAdmin(admin.ModelAdmin):
     search_fields = ('incoming_number', 'responsible_person_from_customer')
     list_filter = ('planned_date',)
     date_hierarchy = 'planned_date'
+
+@admin.register(Company_branch)
+class Company_branchAdmin(admin.ModelAdmin):
+    list_display = ('name_of_company', 'revenue_for_last_year', 'length_of_electrical_network_km')
+    list_filter = ('name_of_company', 'revenue_for_last_year')  # Фильтры в правой части
+    list_filter = (RevenueRangeFilter,)
+    search_fields = ('name_of_company', 'address')  # Поиск по этим полям
 
 admin.site.register(Customer, CustomerAdmin)
 admin.site.register(Decision_maker, Decision_makerAdmin)
