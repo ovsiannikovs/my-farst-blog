@@ -188,3 +188,21 @@ class Company_branch(models.Model):
         verbose_name = 'Филиал'
         verbose_name_plural = 'Филиал'
         ordering = ['name_of_company']
+
+
+class Meeting(models.Model):
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, verbose_name='Заказчик', blank=True, null=True)
+    decision_maker = models.ForeignKey(Decision_maker, on_delete=models.CASCADE, verbose_name='ЛПР', blank=True, null=True)
+    responsible_user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Ответственный пользователь')
+    planned_date = models.DateField(verbose_name='Плановая дата', blank=True, null=True)
+    goal_description = models.TextField(max_length=3500, verbose_name='Описание цели встречи', blank=True, null=True)
+    result_description = models.TextField(max_length=3500, verbose_name='Описание результата встречи', blank=True, null=True)
+    deal = models.ForeignKey(Deal, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Связанная сделка')
+
+    def __str__(self):
+        return f"Встреча с {self.decision_maker.full_name if self.decision_maker else 'ЛПР'}"
+
+    class Meta:
+        verbose_name = 'Встреча'
+        verbose_name_plural = 'Встречи'
+        ordering = ['-planned_date']
