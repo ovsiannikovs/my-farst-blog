@@ -64,12 +64,12 @@ class Post(models.Model):
         ('1', '1'),
     ]
     name = models.CharField(max_length=100, verbose_name="Наименование")
-    desig_product = models.CharField(max_length=50, verbose_name="Обозначение изделия")
+    desig_document = models.CharField(max_length=50, verbose_name="Обозначение изделия")
     author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_posts', verbose_name="Автор")
     last_editor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='edited_posts', verbose_name="Последний редактор")
     current_responsible = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='responsible_posts', verbose_name="Текущий ответственный")
     date_of_creation = models.DateTimeField(default=timezone.now, verbose_name="Дата и время создания")
-    date_of_change = models.DateTimeField(default=timezone.now, verbose_name="Дата и время последнего изменения")
+    date_of_change = models.DateTimeField(auto_now=True, verbose_name="Дата и время последнего изменения")
     version = models.CharField(max_length=20, default='1', verbose_name="Версия")
     version_diff = models.TextField(max_length=1000, blank=True, default='Стартовая версия', verbose_name="Сравнение версий")
     litera = models.CharField(max_length=20, choices=LITERA_CHOICES, default='П-', verbose_name="Стадия разработки (литера)")
@@ -110,11 +110,11 @@ class GeneralDrawingProduct(models.Model):
     author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='gd_created_by', verbose_name="Автор")
     date_of_creation = models.DateTimeField(default=timezone.now, verbose_name="Дата и время создания")
     last_editor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='gd_edited_by', verbose_name="Последний редактор")
-    date_of_change = models.DateTimeField(default=timezone.now, verbose_name="Дата и время последнего изменения")
+    date_of_change = models.DateTimeField(auto_now=True, verbose_name="Дата и время последнего изменения")
     current_responsible = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='gd_responsible', verbose_name="Текущий ответственный")
     status = models.CharField(max_length=50, default='На согласовании', verbose_name="Статус (состояние)")
-    priority = models.CharField(max_length=30, blank=True, default='', verbose_name="Дополнительная метка статуса")
-    version = models.CharField(max_length=6, default='1.0', verbose_name="Версия")
+    priority = models.CharField(max_length=30, blank=True, default='', verbose_name="Приоритет в работе")
+    version = models.CharField(max_length=6, default='1', verbose_name="Версия")
     version_diff = models.TextField(max_length=1000, blank=True, default='Стартовая версия', verbose_name="Сравнение версий")
     litera = models.CharField(max_length=20, default='П-', verbose_name="Стадия разработки  (Литера)")
     trl = models.CharField(max_length=10, default='1-', verbose_name="Уровень готовности технологий (TRL)")
@@ -124,7 +124,7 @@ class GeneralDrawingProduct(models.Model):
     pattern = models.CharField(max_length=50, blank=True, default='ВО ПТ', verbose_name="Шаблон")
     develop_org = models.CharField(max_length=100, blank=True, default='ООО "СИСТЕМА"', verbose_name="Организация-разработчик")
     language = models.CharField(max_length=10, blank=True, default='rus', verbose_name="Язык")
-    uploaded_file = models.FileField(upload_to='uploads/', default=0, verbose_name="Загружаемый файл")
+    uploaded_file = models.FileField(upload_to='uploads/', blank = True, verbose_name="Загружаемый файл")
 
     class Meta:
         verbose_name = 'Чертеж общего вида изделия'
@@ -175,11 +175,11 @@ class ElectronicModelProduct(models.Model):
     author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='electronicmodel_author', verbose_name="Автор")
     date_of_creation = models.DateTimeField(default=timezone.now, verbose_name="Дата и время создания")
     last_editor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='electronicmodel_last_editor', verbose_name="Последний редактор")
-    date_of_change = models.DateTimeField(default=timezone.now, verbose_name="Дата и время последнего изменения")
+    date_of_change = models.DateTimeField(auto_now=True, verbose_name="Дата и время последнего изменения")
     current_responsible = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='electronicmodel_responsible', verbose_name="Текущий ответственный")
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='Зарегистрирован', verbose_name="Статус (состояние)")
-    priority = models.CharField(max_length=30, choices=PRIORITY_CHOICES, blank=True, default='', verbose_name="Дополнительная метка статуса")
-    version = models.CharField(max_length=6, default='1.0', verbose_name="Версия")
+    priority = models.CharField(max_length=30, choices=PRIORITY_CHOICES, blank=True, default='', verbose_name="Приоритет в работе")
+    version = models.CharField(max_length=6, default='1', verbose_name="Версия")
     version_diff = models.TextField(blank=True, default='Стартовая версия', verbose_name="Сравнение версий")
     litera = models.CharField(max_length=20, default='П-', verbose_name="Стадия разработки  (Литера)")
     trl = models.CharField(max_length=10, choices=TRL_CHOICES, default='1-', verbose_name="Уровень готовности технологий (TRL)")
@@ -190,7 +190,7 @@ class ElectronicModelProduct(models.Model):
     develop_org = models.CharField(max_length=100, default='ООО "СИСТЕМА"', verbose_name="Организация-разработчик")
     language = models.CharField(max_length=10, default='rus', verbose_name="Язык")
 
-    uploaded_file = models.FileField(upload_to='uploads/', default=0, verbose_name="Загружаемый файл")
+    uploaded_file = models.FileField(upload_to='uploads/', blank = True, verbose_name="Загружаемый файл")
 
     class Meta:
         verbose_name = 'Электронная модель продукта'
@@ -241,11 +241,11 @@ class GeneralElectricalDiagram(models.Model):
     author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Автор")
     date_of_creation = models.DateTimeField(default=timezone.now, verbose_name="Дата и время создания")
     last_editor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Последний редактор")
-    date_of_change = models.DateTimeField(default=timezone.now, verbose_name="Дата и время последнего изменения")
+    date_of_change = models.DateTimeField(auto_now=True, verbose_name="Дата и время последнего изменения")
     current_responsible = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Текущий ответственный")
     status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='Зарегистрирован', verbose_name="Статус (состояние)")
-    priority = models.CharField(max_length=30, choices=PRIORITY_CHOICES, blank=True, default='', verbose_name="Дополнительная метка статуса")
-    version = models.CharField(max_length=6, default='1.0', verbose_name="Версия")
+    priority = models.CharField(max_length=30, choices=PRIORITY_CHOICES, blank=True, default='', verbose_name="Приоритет в работе")
+    version = models.CharField(max_length=6, default='1', verbose_name="Версия")
     version_diff = models.TextField(blank=True, default='Стартовая версия', verbose_name="Сравнение версий")
     litera = models.CharField(max_length=2, default='П-', verbose_name="Стадия разработки  (Литера)")
     trl = models.CharField(max_length=10, default='1-', verbose_name="Уровень готовности технологий (TRL)")
@@ -255,7 +255,7 @@ class GeneralElectricalDiagram(models.Model):
     pattern = models.CharField(max_length=50, blank=True, default='Э6 ПТ', verbose_name="Шаблон")
     develop_org = models.CharField(max_length=100, default='ООО "СИСТЕМА"', verbose_name="Организация-разработчик")
     language = models.CharField(max_length=10, default='rus', verbose_name="Язык")
-    uploaded_file = models.FileField(upload_to='uploads/', default=0, verbose_name="Загружаемый файл")
+    uploaded_file = models.FileField(upload_to='uploads/', blank = True, verbose_name="Загружаемый файл")
 
     class Meta:
         verbose_name = 'Схема электрическая общая'
@@ -294,11 +294,11 @@ class SoftwareProduct(models.Model):
     author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Автор")
     date_of_creation = models.DateTimeField(default=timezone.now, verbose_name="Дата и время создания")
     last_editor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Последний редактор")
-    date_of_change = models.DateTimeField(default=timezone.now, verbose_name="Дата и время последнего изменения")
+    date_of_change = models.DateTimeField(auto_now=True, verbose_name="Дата и время последнего изменения")
     current_responsible = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Текущий ответственный")
     status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='Зарегистрирован', verbose_name="Статус (состояние)")
-    priority = models.CharField(max_length=30, blank=True, default='', verbose_name="Дополнительная метка статуса")
-    version = models.CharField(max_length=6, default='1.0', verbose_name="Версия")
+    priority = models.CharField(max_length=30, blank=True, default='', verbose_name="Приоритет в работе")
+    version = models.CharField(max_length=6, default='1', verbose_name="Версия")
     version_diff = models.TextField(blank=True, default='Стартовая версия', verbose_name="Сравнение версий")
     litera = models.CharField(max_length=2, default='П-', verbose_name="Стадия разработки  (Литера)")
     trl = models.CharField(max_length=10, default='1-', verbose_name="Уровень готовности технологий (TRL)")
@@ -308,7 +308,7 @@ class SoftwareProduct(models.Model):
     pattern = models.CharField(max_length=50, blank=True, default='Э6 ПТ', verbose_name="Шаблон")
     develop_org = models.CharField(max_length=100, default='ООО "СИСТЕМА"', verbose_name="Организация-разработчик")
     language = models.CharField(max_length=10, default='rus', verbose_name="Язык")
-    uploaded_file = models.FileField(upload_to='uploads/', default=0, verbose_name="Загружаемый файл")
+    uploaded_file = models.FileField(upload_to='uploads/', blank = True, verbose_name="Загружаемый файл")
 
     class Meta:
         verbose_name = 'Программное обеспечение Технического предложения'
@@ -323,51 +323,38 @@ class ReportTechnicalProposal(models.Model):
     name = models.CharField(max_length=100, verbose_name="Наименование")
 
     INFO_FORMAT_CHOICES = [
-        ("ДБ", "ДБ КД"),
-        ("ДЭ", "ДЭ КД"),
-        ("ТДЭ", "ТДЭ"),
+        ("ДБ", "ДБ"),
+        ("ДЭ", "ДЭ"),
     ]
     info_format = models.CharField(max_length=10, choices=INFO_FORMAT_CHOICES, default="ДЭ", blank=True, verbose_name="Формат представления информации")
-
-    primary_use = models.CharField(max_length=100, default='СИ.40522001.000.13ВПТ', verbose_name="Первичное применение")
 
     author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Автор")
     date_of_creation = models.DateTimeField(default=timezone.now, verbose_name="Дата и время создания")
     last_editor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Последний редактор")
-    date_of_change = models.DateTimeField(default=timezone.now, verbose_name="Дата и время последнего изменения")
-    current_responsible = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Текущий ответственный")
+    date_of_change = models.DateTimeField(auto_now=True, verbose_name="Дата и время последнего изменения")
+    current_responsible = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank = True, related_name='+', verbose_name="Текущий ответственный")
 
     STATUS_CHOICES = [
         ('Зарегистрирован', 'Зарегистрирован'),
-        ('Рабочий вариант', 'Рабочий вариант'),
-        ('Разработка', 'Разработка'),
-        ('Проверка', 'Проверка'),
-        ('Проверен', 'Проверен'),
-        ('На согласовании', 'На согласовании'),
-        ('Согласован', 'Согласован'),
+        ('В разработке', 'В разработке'),
+        ('На проверке', 'На проверке'),
         ('На утверждении', 'На утверждении'),
-        ('Утвержден', 'Утвержден'),
-        ('Отклонен', 'Отклонен'),
         ('Выпущен', 'Выпущен'),
-        ('Заморожен', 'Заморожен'),
         ('Заменен', 'Заменен'),
-        ('Заблокирован', 'Заблокирован'),
-        ('Аннулирован', 'Аннулирован'),
-        ('На пересмотре', 'На пересмотре'),
-        ('Архив', 'Архив'),
-    ]
+        ('Аннулирован', 'Аннулирован'), 
+        ('В архиве',  'В архиве')
+        ]
     status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='Зарегистрирован', verbose_name="Статус (состояние)")
-    version = models.CharField(max_length=6, default='1.0', verbose_name="Версия")
+    priority = models.CharField(max_length=30, blank=True, default='', verbose_name="Приоритет в работе")
+    version = models.CharField(max_length=6, default='1', verbose_name="Версия")
     version_diff = models.TextField(blank=True, default='Стартовая версия', verbose_name="Сравнение версий")
-    litera = models.CharField(max_length=2, default='П-', verbose_name="Стадия разработки  (Литера)")
-    trl = models.CharField(max_length=10, default='1-', verbose_name="Уровень готовности технологий (TRL)")
     validity_date = models.DateField(null=True, blank=True, verbose_name="Срок действия")
     subscribers = models.CharField(max_length=200, blank=True, default='', verbose_name="Внешние и внутренние получатели")
     related_documents = models.TextField(blank=True, default='', verbose_name='Связанные сопроводительные документы')
     pattern = models.CharField(max_length=50, blank=True, default='Э6 ПТ', verbose_name="Шаблон")
     develop_org = models.CharField(max_length=100, default='ООО "СИСТЕМА"', verbose_name="Организация-разработчик")
     language = models.CharField(max_length=10, default='rus', verbose_name="Язык")
-    uploaded_file = models.FileField(upload_to='uploads/', default=0, verbose_name="Загружаемый файл")
+    uploaded_file = models.FileField(upload_to='uploads/', blank = True, null=True, verbose_name="Загружаемый файл")
 
     DEVELOP_ORG_CHOICES = [
         ('ООО "СИСТЕМА"', 'ООО "СИСТЕМА"'),
@@ -375,8 +362,8 @@ class ReportTechnicalProposal(models.Model):
     develop_org = models.CharField(max_length=100, choices=DEVELOP_ORG_CHOICES, default='ООО "СИСТЕМА"', blank=True, verbose_name="Организация-разработчик")
 
     LANGUAGE_CHOICES = [
-        ('rus', 'Русский'),
-        ('eng', 'Английский'),
+        ('rus', 'rus'),
+        ('eng', 'eng'),
     ]   
     language = models.CharField(max_length=10, choices=LANGUAGE_CHOICES, default='rus', blank=True, verbose_name="Язык")
 
@@ -386,7 +373,7 @@ class ReportTechnicalProposal(models.Model):
         verbose_name = 'Пояснительна записка Технического предложения'
         verbose_name_plural = 'Пояснительные записки Технического предложения'
     def __str__(self):
-        return self.name or f"Пояснительная записка {self.desig_document}"
+        return self.name
 
 class ProtocolTechnicalProposal(models.Model):
     id = models.BigAutoField(primary_key=True, unique=True)
@@ -404,11 +391,11 @@ class ProtocolTechnicalProposal(models.Model):
     author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Автор")
     date_of_creation = models.DateTimeField(default=timezone.now, verbose_name="Дата и время создания")
     last_editor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Последний редактор")
-    date_of_change = models.DateTimeField(default=timezone.now, verbose_name="Дата и время последнего изменения")
+    date_of_change = models.DateTimeField(auto_now=True, verbose_name="Дата и время последнего изменения")
     current_responsible = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Текущий ответственный")
     status = models.CharField(max_length=30, default='Зарегистрирован', verbose_name="Статус (состояние)")
-    priority = models.CharField(max_length=30, blank=True, default='', verbose_name="Дополнительная метка статуса")
-    version = models.CharField(max_length=6, default='1.0', verbose_name="Версия")
+    priority = models.CharField(max_length=30, blank=True, default='', verbose_name="Приоритет в работе")
+    version = models.CharField(max_length=6, default='1', verbose_name="Версия")
     version_diff = models.TextField(blank=True, default='Стартовая версия', verbose_name="Сравнение версий")
     litera = models.CharField(max_length=2, default='П-', verbose_name="Стадия разработки  (Литера)")
     trl = models.CharField(max_length=10, default='1-', verbose_name="Уровень готовности технологий (TRL)")
@@ -418,7 +405,7 @@ class ProtocolTechnicalProposal(models.Model):
     pattern = models.CharField(max_length=50, blank=True, default='Э6 ПТ', verbose_name="Шаблон")
     develop_org = models.CharField(max_length=100, default='ООО "СИСТЕМА"', verbose_name="Организация-разработчик")
     language = models.CharField(max_length=10, default='rus', verbose_name="Язык")
-    uploaded_file = models.FileField(upload_to='uploads/', default=0, verbose_name="Загружаемый файл")
+    uploaded_file = models.FileField(upload_to='uploads/', blank = True, verbose_name="Загружаемый файл")
 
     class Meta:
         verbose_name = "Протокол. Техническое предложение"
@@ -471,11 +458,11 @@ class GeneralDrawingUnit(models.Model):
     author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Автор")
     date_of_creation = models.DateTimeField(default=timezone.now, verbose_name="Дата и время создания")
     last_editor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Последний редактор")
-    date_of_change = models.DateTimeField(default=timezone.now, verbose_name="Дата и время последнего изменения")
+    date_of_change = models.DateTimeField(auto_now=True, verbose_name="Дата и время последнего изменения")
     current_responsible = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Текущий ответственный")
     status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='Зарегистрирован', verbose_name="Статус (состояние)")
-    priority = models.CharField(max_length=30, choices=PRIORITY_CHOICES, blank=True, default='', verbose_name="Дополнительная метка статуса")
-    version = models.CharField(max_length=6, default='1.0', verbose_name="Версия")
+    priority = models.CharField(max_length=30, choices=PRIORITY_CHOICES, blank=True, default='', verbose_name="Приоритет в работе")
+    version = models.CharField(max_length=6, default='1', verbose_name="Версия")
     version_diff = models.TextField(blank=True, default='Стартовая версия', verbose_name="Сравнение версий")
     litera = models.CharField(max_length=2, default='П-', verbose_name="Стадия разработки  (Литера)")
     trl = models.CharField(max_length=10, default='1-', verbose_name="Уровень готовности технологий (TRL)")
@@ -485,7 +472,7 @@ class GeneralDrawingUnit(models.Model):
     pattern = models.CharField(max_length=50, blank=True, default='Э6 ПТ', verbose_name="Шаблон")
     develop_org = models.CharField(max_length=100, default='ООО "СИСТЕМА"', verbose_name="Организация-разработчик")
     language = models.CharField(max_length=10, default='rus', verbose_name="Язык")
-    uploaded_file = models.FileField(upload_to='uploads/', default=0, verbose_name="Загружаемый файл")
+    uploaded_file = models.FileField(upload_to='uploads/', blank = True, verbose_name="Загружаемый файл")
 
     class Meta:
         verbose_name = 'Чертеж общего вида сборочной единицы'
@@ -537,11 +524,11 @@ class ElectronicModelUnit(models.Model):
     author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Автор")
     date_of_creation = models.DateTimeField(default=timezone.now, verbose_name="Дата и время создания")
     last_editor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Последний редактор")
-    date_of_change = models.DateTimeField(default=timezone.now, verbose_name="Дата и время последнего изменения")
+    date_of_change = models.DateTimeField(auto_now=True, verbose_name="Дата и время последнего изменения")
     current_responsible = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Текущий ответственный")
     status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='Зарегистрирован', verbose_name="Статус (состояние)")
-    priority = models.CharField(max_length=30, choices=PRIORITY_CHOICES, blank=True, default='', verbose_name="Дополнительная метка статуса")
-    version = models.CharField(max_length=6, default='1.0', verbose_name="Версия")
+    priority = models.CharField(max_length=30, choices=PRIORITY_CHOICES, blank=True, default='', verbose_name="Приоритет в работе")
+    version = models.CharField(max_length=6, default='1', verbose_name="Версия")
     version_diff = models.TextField(blank=True, default='Стартовая версия', verbose_name="Сравнение версий")
     litera = models.CharField(max_length=2, default='П-', verbose_name="Стадия разработки  (Литера)")
     trl = models.CharField(max_length=10, default='1-', verbose_name="Уровень готовности технологий (TRL)")
@@ -551,7 +538,7 @@ class ElectronicModelUnit(models.Model):
     pattern = models.CharField(max_length=50, blank=True, default='Э6 ПТ', verbose_name="Шаблон")
     develop_org = models.CharField(max_length=100, default='ООО "СИСТЕМА"', verbose_name="Организация-разработчик")
     language = models.CharField(max_length=10, default='rus', verbose_name="Язык")
-    uploaded_file = models.FileField(upload_to='uploads/', default=0, verbose_name="Загружаемый файл")
+    uploaded_file = models.FileField(upload_to='uploads/', blank = True, verbose_name="Загружаемый файл")
 
     class Meta:
         verbose_name = 'Электронная модель сборочной единицы'
@@ -602,11 +589,11 @@ class DrawingPartUnit(models.Model):
     author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Автор")
     date_of_creation = models.DateTimeField(default=timezone.now, verbose_name="Дата и время создания")
     last_editor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Последний редактор")
-    date_of_change = models.DateTimeField(default=timezone.now, verbose_name="Дата и время последнего изменения")
+    date_of_change = models.DateTimeField(auto_now=True, verbose_name="Дата и время последнего изменения")
     current_responsible = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Текущий ответственный")
     status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='Зарегистрирован', verbose_name="Статус (состояние)")
-    priority = models.CharField(max_length=30, choices=PRIORITY_CHOICES, blank=True, default='', verbose_name="Дополнительная метка статуса")
-    version = models.CharField(max_length=6, default='1.0', verbose_name="Версия")
+    priority = models.CharField(max_length=30, choices=PRIORITY_CHOICES, blank=True, default='', verbose_name="Приоритет в работе")
+    version = models.CharField(max_length=6, default='1', verbose_name="Версия")
     version_diff = models.TextField(blank=True, default='Стартовая версия', verbose_name="Сравнение версий")
     litera = models.CharField(max_length=2, default='П-', verbose_name="Стадия разработки  (Литера)")
     trl = models.CharField(max_length=10, default='1-', verbose_name="Уровень готовности технологий (TRL)")
@@ -616,7 +603,7 @@ class DrawingPartUnit(models.Model):
     pattern = models.CharField(max_length=50, blank=True, default='Э6 ПТ', verbose_name="Шаблон")
     develop_org = models.CharField(max_length=100, default='ООО "СИСТЕМА"', verbose_name="Организация-разработчик")
     language = models.CharField(max_length=10, default='rus', verbose_name="Язык")
-    uploaded_file = models.FileField(upload_to='uploads/', default=0, verbose_name="Загружаемый файл")
+    uploaded_file = models.FileField(upload_to='uploads/', blank = True, verbose_name="Загружаемый файл")
 
     class Meta:
         verbose_name = 'Чертеж детали сборочной единицы'
@@ -634,11 +621,11 @@ class ElectronicModelPartUnit(models.Model):
     author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Автор")
     date_of_creation = models.DateTimeField(default=timezone.now, verbose_name="Дата и время создания")
     last_editor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Последний редактор")
-    date_of_change = models.DateTimeField(default=timezone.now, verbose_name="Дата и время последнего изменения")
+    date_of_change = models.DateTimeField(auto_now=True, verbose_name="Дата и время последнего изменения")
     current_responsible = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Текущий ответственный")
     status = models.CharField(max_length=30, default='Зарегистрирован', verbose_name="Статус (состояние)")
-    priority = models.CharField(max_length=30, blank=True, default='', verbose_name="Дополнительная метка статуса")
-    version = models.CharField(max_length=6, default='1.0', verbose_name="Версия")
+    priority = models.CharField(max_length=30, blank=True, default='', verbose_name="Приоритет в работе")
+    version = models.CharField(max_length=6, default='1', verbose_name="Версия")
     version_diff = models.TextField(blank=True, default='Стартовая версия', verbose_name="Сравнение версий")
     litera = models.CharField(max_length=2, default='П-', verbose_name="Стадия разработки  (Литера)")
     trl = models.CharField(max_length=10, default='1-', verbose_name="Уровень готовности технологий (TRL)")
@@ -648,7 +635,7 @@ class ElectronicModelPartUnit(models.Model):
     pattern = models.CharField(max_length=50, blank=True, default='Э6 ПТ', verbose_name="Шаблон")
     develop_org = models.CharField(max_length=100, default='ООО "СИСТЕМА"', verbose_name="Организация-разработчик")
     language = models.CharField(max_length=10, default='rus', verbose_name="Язык")
-    uploaded_file = models.FileField(upload_to='uploads/', default=0, verbose_name="Загружаемый файл")
+    uploaded_file = models.FileField(upload_to='uploads/', blank = True, verbose_name="Загружаемый файл")
 
     class Meta:
         verbose_name = 'Электронная модель детали СЕ'
@@ -709,11 +696,11 @@ class DrawingPartProduct(models.Model):
     author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Автор")
     date_of_creation = models.DateTimeField(default=timezone.now, verbose_name="Дата и время создания")
     last_editor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Последний редактор")
-    date_of_change = models.DateTimeField(default=timezone.now, verbose_name="Дата и время последнего изменения")
+    date_of_change = models.DateTimeField(auto_now=True, verbose_name="Дата и время последнего изменения")
     current_responsible = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Текущий ответственный")
     status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='Зарегистрирован', verbose_name="Статус (состояние)")
-    priority = models.CharField(max_length=30, choices=PRIORITY_CHOICES, blank=True, default='', verbose_name="Дополнительная метка статуса")
-    version = models.CharField(max_length=6, default='1.0', verbose_name="Версия")
+    priority = models.CharField(max_length=30, choices=PRIORITY_CHOICES, blank=True, default='', verbose_name="Приоритет в работе")
+    version = models.CharField(max_length=6, default='1', verbose_name="Версия")
     version_diff = models.TextField(blank=True, default='Стартовая версия', verbose_name="Сравнение версий")
     litera = models.CharField(max_length=2, default='П-', verbose_name="Стадия разработки  (Литера)")
     trl = models.CharField(max_length=10, default='1-', verbose_name="Уровень готовности технологий (TRL)")
@@ -723,7 +710,7 @@ class DrawingPartProduct(models.Model):
     pattern = models.CharField(max_length=50, blank=True, default='Э6 ПТ', verbose_name="Шаблон")
     develop_org = models.CharField(max_length=100, default='ООО "СИСТЕМА"', verbose_name="Организация-разработчик")
     language = models.CharField(max_length=10, default='rus', verbose_name="Язык")
-    uploaded_file = models.FileField(upload_to='uploads/', default=0, verbose_name="Загружаемый файл")
+    uploaded_file = models.FileField(upload_to='uploads/', blank = True, verbose_name="Загружаемый файл")
 
     class Meta:
         verbose_name = 'Чертеж детали изделия'
@@ -741,11 +728,11 @@ class ElectronicModelPartProduct(models.Model):
     author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Автор")
     date_of_creation = models.DateTimeField(default=timezone.now, verbose_name="Дата и время создания")
     last_editor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Последний редактор")
-    date_of_change = models.DateTimeField(default=timezone.now, verbose_name="Дата и время последнего изменения")
+    date_of_change = models.DateTimeField(auto_now=True, verbose_name="Дата и время последнего изменения")
     current_responsible = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Текущий ответственный")
     status = models.CharField(max_length=30, default='Зарегистрирован', verbose_name="Статус (состояние)")
-    priority = models.CharField(max_length=30, blank=True, default='', verbose_name="Дополнительная метка статуса")
-    version = models.CharField(max_length=6, default='1.0', verbose_name="Версия")
+    priority = models.CharField(max_length=30, blank=True, default='', verbose_name="Приоритет в работе")
+    version = models.CharField(max_length=6, default='1', verbose_name="Версия")
     version_diff = models.TextField(blank=True, default='Стартовая версия', verbose_name="Сравнение версий")
     litera = models.CharField(max_length=2, default='П-', verbose_name="Стадия разработки  (Литера)")
     trl = models.CharField(max_length=10, default='1-', verbose_name="Уровень готовности технологий (TRL)")
@@ -755,7 +742,7 @@ class ElectronicModelPartProduct(models.Model):
     pattern = models.CharField(max_length=50, blank=True, default='Э6 ПТ', verbose_name="Шаблон")
     develop_org = models.CharField(max_length=100, default='ООО "СИСТЕМА"', verbose_name="Организация-разработчик")
     language = models.CharField(max_length=10, default='rus', verbose_name="Язык")
-    uploaded_file = models.FileField(upload_to='uploads/', default=0, verbose_name="Загружаемый файл")
+    uploaded_file = models.FileField(upload_to='uploads/', blank = True, verbose_name="Загружаемый файл")
 
     class Meta:
         verbose_name = 'Электронная модель детали изделия'
@@ -779,9 +766,9 @@ class AddReportTechnicalProposal(models.Model):
     author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Автор")
     date_of_creation = models.DateTimeField(default=timezone.now, verbose_name="Дата и время создания")
     last_editor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Последний редактор")
-    date_of_change = models.DateTimeField(default=timezone.now, verbose_name="Дата и время последнего изменения")
+    date_of_change = models.DateTimeField(auto_now=True, verbose_name="Дата и время последнего изменения")
     current_responsible = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Текущий ответственный")
-    uploaded_file = models.FileField(upload_to='uploads/', default=0, verbose_name="Загружаемый файл")
+    uploaded_file = models.FileField(upload_to='uploads/', blank = True, verbose_name="Загружаемый файл")
 
     STATUS_CHOICES = [
         ('Зарегистрирован', 'Зарегистрирован'),
@@ -804,7 +791,7 @@ class AddReportTechnicalProposal(models.Model):
     ]
     status = models.CharField(max_length=30, default='Зарегистрирован', verbose_name="Статус (состояние)")
 
-    version = models.CharField(max_length=6, default='1.0', verbose_name="Версия")
+    version = models.CharField(max_length=6, default='1', verbose_name="Версия")
     version_diff = models.TextField(blank=True, default='Стартовая версия', verbose_name="Сравнение версий")
     litera = models.CharField(max_length=2, default='П-', verbose_name="Стадия разработки  (Литера)")
     trl = models.CharField(max_length=10, default='1-', verbose_name="Уровень готовности технологий (TRL)")
@@ -815,8 +802,8 @@ class AddReportTechnicalProposal(models.Model):
     develop_org = models.CharField(max_length=100, default='ООО "СИСТЕМА"', verbose_name="Организация-разработчик")
 
     LANGUAGE_CHOICES = [
-        ('rus', 'Русский'),
-        ('eng', 'Английский'),
+        ('rus', 'rus'),
+        ('eng', 'eng'),
     ]
     language = models.CharField(max_length=10, choices=LANGUAGE_CHOICES, default='rus', verbose_name="Язык")
 
@@ -836,11 +823,15 @@ class ListTechnicalProposal(models.Model):
 
     STATUS_CHOICES = [
         ('Зарегистрирован', 'Зарегистрирован'),
-        ('Рабочий вариант', 'Рабочий вариант'),
-        ('Разработка', 'Разработка'),
-        ('На согласовании', 'На согласовании'),
-        ('Утвержден', 'Утвержден'),
-    ]
+        ('В разработке', 'В разработке'),
+        ('На проверке', 'На проверке'),
+        ('На утверждении', 'На утверждении'),
+        ('Выпущен', 'Выпущен'),
+        ('Заменен', 'Заменен'),
+        ('Аннулирован', 'Аннулирован'), 
+        ('В архиве',  'В архиве')
+        ]
+
 
     PRIORITY_CHOICES = [
         ('Срочно', 'Срочно'),
@@ -855,15 +846,15 @@ class ListTechnicalProposal(models.Model):
     post = models.ForeignKey('Post', on_delete=models.CASCADE, null=True, blank=True, related_name='list_technical_proposals')
     desig_document = models.CharField(max_length=50, unique=True, default=1, verbose_name="Обозначение изделия")
     info_format = models.CharField(max_length=20, choices=INFO_FORMAT_CHOICES, default='ДЭ', verbose_name="Формат представления информации")
-    change_number = models.CharField(max_length=20, default='Изм. 1', verbose_name="Номер изменения")
+    change_number = models.CharField(max_length=20, default='без изм', verbose_name="Номер изменения")
     author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Автор")
     date_of_creation = models.DateTimeField(default=timezone.now, verbose_name="Дата и время создания")
     last_editor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Последний редактор")
-    date_of_change = models.DateTimeField(default=timezone.now, verbose_name="Дата и время последнего изменения")
+    date_of_change = models.DateTimeField(auto_now=True, verbose_name="Дата и время последнего изменения")
     current_responsible = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Текущий ответственный")
     status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='Зарегистрирован', verbose_name="Статус (состояние)")
-    priority = models.CharField(max_length=30, choices=PRIORITY_CHOICES, blank=True, default='', verbose_name="Дополнительная метка статуса")
-    version = models.CharField(max_length=6, default='1.0', verbose_name="Версия")
+    priority = models.CharField(max_length=30, choices=PRIORITY_CHOICES, blank=True, default='', verbose_name="Приоритет в работе")
+    version = models.CharField(max_length=6, default='1', verbose_name="Версия")
     version_diff = models.TextField(blank=True, default='Стартовая версия', verbose_name="Сравнение версий")
     litera = models.CharField(max_length=2, default='П-', verbose_name="Стадия разработки  (Литера)")
     trl = models.CharField(max_length=10, default='1-', verbose_name="Уровень готовности технологий (TRL)")
@@ -873,7 +864,7 @@ class ListTechnicalProposal(models.Model):
     pattern = models.CharField(max_length=50, blank=True, default='Э6 ПТ', verbose_name="Шаблон")
     develop_org = models.CharField(max_length=100, default='ООО "СИСТЕМА"', verbose_name="Организация-разработчик")
     language = models.CharField(max_length=10, default='rus', verbose_name="Язык")
-    uploaded_file = models.FileField(upload_to='uploads/', default=0, verbose_name="Загружаемый файл")
+    uploaded_file = models.FileField(upload_to='uploads/', blank = True, verbose_name="Загружаемый файл")
 
 
     class Meta:
@@ -897,7 +888,7 @@ class TechnicalProposal(models.Model):
     author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, verbose_name="Автор")
     date_of_creation = models.DateTimeField(default=timezone.now, verbose_name="Дата и время создания")
     last_editor = models.ForeignKey(User, related_name='tp_last_edited_by', on_delete=models.SET_NULL, null=True, verbose_name="Последний редактор")
-    date_of_change = models.DateTimeField(default=timezone.now, verbose_name="Дата и время последнего изменения")
+    date_of_change = models.DateTimeField(auto_now=True, verbose_name="Дата и время последнего изменения")
     current_responsible = models.ForeignKey(User, related_name='tp_current_responsible', on_delete=models.SET_NULL, null=True, verbose_name="Текущий ответственный")
     version = models.CharField(max_length=20, blank=True, default='1', verbose_name="Версия")
     version_diff = models.TextField(max_length=1000, blank=True, default='Стартовая версия', verbose_name="Сравнение версий")
@@ -934,9 +925,11 @@ class TechTask(models.Model):
     created_at = models.DateTimeField(default=timezone.now, verbose_name="Дата и время создания")
 
     updated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True,related_name='techtasks_updated', verbose_name="Последний редактор")
-    updated_at = models.DateTimeField(default=timezone.now, verbose_name="Дата и время последнего изменения")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Дата и время последнего изменения")
 
     editor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True,related_name='techtasks_editing', verbose_name="Текущий редактор")
+
+    description = models.TextField(max_length=3000, blank=True, null=True, verbose_name='Описание')
 
     change_description = models.TextField(max_length=1000, blank=True, default='Стартовая версия', verbose_name="Сравнение версий")
     version = models.CharField(max_length=20, blank=True, default='1', verbose_name="Версия")
@@ -972,6 +965,8 @@ class TechTask(models.Model):
     ]
     permission_level = models.PositiveSmallIntegerField(choices=PERMISSIONS_CHOICES, default=7, verbose_name="Уровень доступа")
 
+    uploaded_file = models.FileField(upload_to='uploads/', blank = True, verbose_name="Загружаемый файл")
+
     class Meta:
         verbose_name = "Техническое задание"
         verbose_name_plural = "Технические задания"
@@ -985,10 +980,10 @@ class OKRTask(models.Model):
 
 
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='okr_created', verbose_name="Автор")
-    created_at = models.DateTimeField(default=timezone.now, verbose_name="Дата и время создания")
+    created_at = models.DateTimeField(default=timezone.now,verbose_name="Дата и время создания")
 
     updated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True,related_name='okr_updated', verbose_name="Последний редактор")
-    updated_at = models.DateTimeField(default=timezone.now, verbose_name="Дата и время последнего изменения")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Дата и время последнего изменения")
 
     editor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True,related_name='okr_editing', verbose_name="Текущий редактор")
 
@@ -1086,7 +1081,7 @@ class Template(models.Model):
 
     version = models.CharField(
         max_length=5,
-        blank=True,
+        blank=True, default = '1', 
         verbose_name="Версия"
     )
 
@@ -1105,7 +1100,7 @@ class Template(models.Model):
 
     editor = models.ForeignKey(User, related_name='template_editor', null=True, blank=True, on_delete=models.SET_NULL, verbose_name="Текущий ответственный")
 
-    change_description = models.TextField(max_length=1000, blank=True, null=True, verbose_name="Сравнение версий")
+    change_description = models.TextField(max_length=1000, blank=True, null=True, default ='Стартовая версия', verbose_name="Сравнение версий")
 
     STATUS_CHOICES = [
         ('draft', 'Рабочий вариант'),
@@ -1196,7 +1191,7 @@ class ReworkTask(models.Model):
     )
 
     version = models.CharField(
-        max_length=6, blank=True,
+        max_length=6, blank=True, default = '1',
         verbose_name="Версия"
     )
 
@@ -1214,7 +1209,7 @@ class ReworkTask(models.Model):
 
     editor = models.ForeignKey(User, related_name='reworktask_editor', null=True, blank=True, on_delete=models.SET_NULL, verbose_name="Текущий ответственный")
 
-    change_description = models.TextField(max_length=1000, blank=True, null=True, verbose_name="Сравнение версий")
+    change_description = models.TextField(max_length=1000, blank=True, null=True, default = 'Стартовая версия', verbose_name="Сравнение версий")
 
     STATUS_CHOICES = [
         ('draft', 'Рабочий вариант'),
@@ -1297,7 +1292,7 @@ class WorkPlan(models.Model):
     )
 
     version = models.CharField(
-        max_length=6, blank=True,
+        max_length=6, blank=True, default = '1',
         verbose_name="Версия"
     )
 
@@ -1315,7 +1310,7 @@ class WorkPlan(models.Model):
 
     editor = models.ForeignKey(User, related_name='workplan_editor', null=True, blank=True, on_delete=models.SET_NULL, verbose_name="Текущий ответственный")
 
-    change_description = models.TextField(max_length=1000, blank=True, null=True, verbose_name="Сравнение версий")
+    change_description = models.TextField(max_length=1000, blank=True, null=True, default = 'Стартовая версия', verbose_name="Сравнение версий")
 
     STATUS_CHOICES = [
         ('draft', 'Рабочий вариант'),
