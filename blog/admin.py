@@ -35,25 +35,42 @@ class TechnicalProposalAdmin(admin.ModelAdmin):
 class ListTechnicalProposalInline(admin.TabularInline):
     model = ListTechnicalProposal
     extra = 1
+    can_delete = True
+
+    def has_add_permission(self, request, obj=None):
+        if obj and ListTechnicalProposal.objects.filter(post=obj).count() >= 1:
+            return False
+        return True
+
 
 @admin.register(Post)
 class PostAdmin(admin.ModelAdmin):
-    list_display = ('name', 'desig_product', 'author', 'date_of_creation', 'date_of_change')
+    list_display = ('name', 'desig_document', 'author', 'date_of_creation', 'date_of_change')
+    readonly_fields = ('date_of_change',)
     inlines = [ListTechnicalProposalInline]
 
     def save_formset(self, request, form, formset, change):
         instances = formset.save(commit=False)
         for instance in instances:
             instance.post = form.instance
-            if not instance.name:
+
+            # Если name пустое или только пробелы — взять из головной модели
+            if not instance.name or not instance.name.strip():
                 instance.name = instance.post.name
+
+            # Если desig_document пустой или только пробелы — взять из головной модели
+            if not instance.desig_document or not instance.desig_document.strip():
+                instance.desig_document = instance.post.desig_document
+
             instance.save()
         formset.save_m2m()
+
 
 @admin.register(ListTechnicalProposal)
 class ListTechnicalProposalAdmin(admin.ModelAdmin):
     list_display = ['name', 'category', 'desig_document', 'status', 'date_of_creation']
     search_fields = ['name', 'desig_document']
+    readonly_fields = ('date_of_change',)
 
 
     def save_model(self, request, obj, form, change):
@@ -68,6 +85,7 @@ class GeneralDrawingProductAdmin(admin.ModelAdmin):
     )
     search_fields = ('name', 'desig_document')
     list_filter = ('category', 'status', 'trl', 'litera')
+    readonly_fields = ('date_of_change',)
 
 @admin.register(ElectronicModelProduct)
 class ElectronicModelProductAdmin(admin.ModelAdmin):
@@ -76,6 +94,7 @@ class ElectronicModelProductAdmin(admin.ModelAdmin):
     )
     search_fields = ('name', 'desig_document')
     list_filter = ('status', 'trl', 'category', 'develop_org')
+    readonly_fields = ('date_of_change',)
 
 @admin.register(GeneralElectricalDiagram)
 class GeneralElectricalDiagramAdmin(admin.ModelAdmin):
@@ -83,21 +102,25 @@ class GeneralElectricalDiagramAdmin(admin.ModelAdmin):
         'name','desig_document','author','date_of_creation','status','version',
     )
     search_fields = ('name', 'desig_document', 'author__username')
-    list_filter = ('status', 'trl', 'develop_org', 'language')    
+    list_filter = ('status', 'trl', 'develop_org', 'language')  
+    readonly_fields = ('date_of_change',)  
 
 @admin.register(SoftwareProduct)
 class SoftwareProductAdmin(admin.ModelAdmin):
     list_display = ('id', 'name', 'category', 'desig_document', 'status', 'version', 'date_of_creation')
     search_fields = ('name', 'desig_document', 'status')
     list_filter = ('status', 'category', 'trl', 'version')    
+    readonly_fields = ('date_of_change',)
 
 @admin.register(GeneralDrawingUnit)
 class GeneralDrawingUnitAdmin(admin.ModelAdmin):
     list_display = ('name', 'desig_document', 'status', 'version')    
+    readonly_fields = ('date_of_change',)
 
 @admin.register(ElectronicModelUnit)
 class ElectronicModelUnitAdmin(admin.ModelAdmin):
     list_display = ('name', 'desig_document', 'status', 'version')
+    readonly_fields = ('date_of_change',)
 
 @admin.register(DrawingPartUnit)
 class DrawingPartUnitAdmin(admin.ModelAdmin):
@@ -114,8 +137,8 @@ class DrawingPartUnitAdmin(admin.ModelAdmin):
     )
     list_filter = ('status', 'category', 'trl', 'develop_org')
     search_fields = ('name', 'desig_document', 'author__username', 'last_editor__username')
-    readonly_fields = ('date_of_creation', 'date_of_change', 'version_diff', 'litera', 'trl')
     ordering = ('-date_of_creation',)
+    readonly_fields = ('date_of_change',)
 
     fieldsets = (
         (None, {
@@ -157,7 +180,7 @@ class ElectronicModelPartUnitAdmin(admin.ModelAdmin):
     )
     search_fields = ('name', 'desig_document', 'category')
     list_filter = ('status', 'trl', 'category', 'develop_org')
-    readonly_fields = ('date_of_creation', 'date_of_change')
+    readonly_fields = ('date_of_change',)
 
     fieldsets = (
         (None, {
@@ -197,7 +220,7 @@ class DrawingPartProductAdmin(admin.ModelAdmin):
     )
     list_filter = ('category', 'status', 'trl', 'date_of_creation')
     search_fields = ('name', 'desig_document', 'author__username', 'current_responsible__username')
-    readonly_fields = ('date_of_creation', 'date_of_change', 'author', 'last_editor')
+    readonly_fields = ('date_of_change',)
 
     def save_model(self, request, obj, form, change):
         if not change:
@@ -214,7 +237,7 @@ class ElectronicModelPartProductAdmin(admin.ModelAdmin):
     )
     list_filter = ('category', 'status', 'trl', 'date_of_creation')
     search_fields = ('desig_document', 'name', 'author__username', 'current_responsible__username')
-    readonly_fields = ('date_of_creation', 'date_of_change', 'author', 'last_editor')
+    readonly_fields = ('date_of_change',)
 
     def save_model(self, request, obj, form, change):
         if not obj.pk:
@@ -226,13 +249,11 @@ class ElectronicModelPartProductAdmin(admin.ModelAdmin):
 class ReportTechnicalProposalAdmin(admin.ModelAdmin):
     list_display = (
         'id', 'name', 'category', 'status', 'version',
-        'trl', 'author', 'current_responsible', 'date_of_creation'
+        'author', 'current_responsible', 'date_of_creation'
     )
-    list_filter = ('category', 'status', 'trl', 'date_of_creation')
+    list_filter = ('category', 'status', 'date_of_creation')
     search_fields = ('name', 'desig_document', 'author__username')
-    readonly_fields = (
-        'date_of_creation', 'date_of_change', 'author', 'last_editor'
-    )
+    readonly_fields = ('date_of_change',)
 
 @admin.register(AddReportTechnicalProposal)
 class AddReportTechnicalProposalAdmin(admin.ModelAdmin):
@@ -248,8 +269,8 @@ class AddReportTechnicalProposalAdmin(admin.ModelAdmin):
         'date_of_change',
     )
     list_filter = ('category', 'status', 'trl', 'date_of_creation')
+    readonly_fields = ('date_of_change',)
     search_fields = ('name', 'author__username', 'current_responsible__username')
-    readonly_fields = ('date_of_creation', 'date_of_change', 'author', 'last_editor')
     fieldsets = (
         (None, {
             'fields': (
@@ -285,7 +306,7 @@ class ProtocolTechnicalProposalAdmin(admin.ModelAdmin):
     )
     list_filter = ('status', 'category', 'trl', 'date_of_creation')
     search_fields = ('name', 'desig_document', 'author__username', 'current_responsible__username')
-    readonly_fields = ('id', 'date_of_creation', 'date_of_change', 'author', 'last_editor')
+    readonly_fields = ('date_of_change',)
 
     def save_model(self, request, obj, form, change):
         """Автоматически проставляем автора и редактора"""
@@ -398,7 +419,7 @@ class OKRTaskAdmin(admin.ModelAdmin):
     list_display = ('name', 'version', 'status', 'created_by', 'created_at', 'updated_at')
     search_fields = ('name', 'version')
     list_filter = ('status', 'priority', 'category')
-    readonly_fields = ('created_at', 'updated_at', 'created_by', 'updated_by')
+    readonly_fields = ('updated_at',)
 
 
 @admin.register(Template)
@@ -406,7 +427,7 @@ class TemplateAdmin(admin.ModelAdmin):
     list_display = ('name', 'version', 'template_type', 'status', 'created_by', 'created_at')
     search_fields = ('name', 'template_type')
     list_filter = ('status', 'access_level')
-    readonly_fields = ('created_at', 'updated_at', 'created_by', 'updated_by')
+    readonly_fields = ('updated_at',)
 
 
 @admin.register(ReworkTask)
@@ -414,7 +435,7 @@ class ReworkTaskAdmin(admin.ModelAdmin):
     list_display = ('name', 'version', 'status', 'created_by', 'created_at')
     search_fields = ('name', 'version')
     list_filter = ('status', 'priority',)
-    readonly_fields = ('created_at', 'updated_at', 'created_by', 'updated_by')
+    readonly_fields = ('updated_at',)
 
 
 @admin.register(WorkPlan)
@@ -422,7 +443,7 @@ class WorkPlanAdmin(admin.ModelAdmin):
     list_display = ('name', 'version', 'status', 'created_by', 'created_at')
     search_fields = ('name', 'version')
     list_filter = ('status', 'priority',)
-    readonly_fields = ('created_at', 'updated_at', 'created_by', 'updated_by')
+    readonly_fields = ('updated_at',)
 
 @admin.register(TechTask)
 class TechTaskAdmin(admin.ModelAdmin):
@@ -431,7 +452,7 @@ class TechTaskAdmin(admin.ModelAdmin):
     )
     search_fields = ('name', 'version')
     list_filter = ('status', 'access_level')
-    readonly_fields = ('created_at', 'updated_at', 'created_by', 'updated_by', 'change_description')
+    readonly_fields = ('updated_at',)
 
     fieldsets = (
         ('Основная информация', {
@@ -447,7 +468,7 @@ class TechTaskAdmin(admin.ModelAdmin):
         ('Служебная информация', {
             'fields': (
                 'created_by', 'created_at', 'updated_by', 'updated_at', 'editor',
-                'change_description', 'permission_level', 'access_level'
+                'description', 'change_description', 'permission_level', 'access_level', 'uploaded_file'
             )
         }),
     )
