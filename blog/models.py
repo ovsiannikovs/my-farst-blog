@@ -13,7 +13,7 @@ class technical_design(models.Model):
 
 class prelim_design(models.Model):
     title = models.CharField(max_length=255)
-    def __str__(self): return self.title    
+    def __str__(self): return self.title
 
 class WorkingDocumentation(models.Model):
     title = models.CharField(max_length=255)
@@ -64,7 +64,7 @@ class Post(models.Model):
         ('1', '1'),
     ]
     name = models.CharField(max_length=100, verbose_name="Наименование")
-    desig_document = models.CharField(max_length=50, verbose_name="Обозначение изделия")
+    desig_document = models.CharField(max_length=50, null=True, verbose_name="Обозначение изделия")
     author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_posts', verbose_name="Автор")
     last_editor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='edited_posts', verbose_name="Последний редактор")
     current_responsible = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='responsible_posts', verbose_name="Текущий ответственный")
@@ -100,8 +100,6 @@ class Post(models.Model):
 
 # Вспомогательные сущности для TechnicalProposal
 class GeneralDrawingProduct(models.Model):
-
-
     category = models.CharField(max_length=50, default='ВО', verbose_name="Категория")
     name = models.CharField(max_length=100, default='ПАК СПМ 2.13 Чертеж общего вида изделия', verbose_name="Наименование")
     desig_document = models.CharField(max_length=50, default='СИ.40522001.000.13ВО', verbose_name="Обозначение документа")
@@ -341,7 +339,7 @@ class ReportTechnicalProposal(models.Model):
         ('На утверждении', 'На утверждении'),
         ('Выпущен', 'Выпущен'),
         ('Заменен', 'Заменен'),
-        ('Аннулирован', 'Аннулирован'), 
+        ('Аннулирован', 'Аннулирован'),
         ('В архиве',  'В архиве')
         ]
     status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='Зарегистрирован', verbose_name="Статус (состояние)")
@@ -364,7 +362,7 @@ class ReportTechnicalProposal(models.Model):
     LANGUAGE_CHOICES = [
         ('rus', 'rus'),
         ('eng', 'eng'),
-    ]   
+    ]
     language = models.CharField(max_length=10, choices=LANGUAGE_CHOICES, default='rus', blank=True, verbose_name="Язык")
 
     uploaded_file = models.FileField(upload_to='uploads/', default=0, verbose_name="Загружаемый файл")
@@ -377,7 +375,7 @@ class ReportTechnicalProposal(models.Model):
 
 class ProtocolTechnicalProposal(models.Model):
     id = models.BigAutoField(primary_key=True, unique=True)
-    
+
     category = models.CharField(
         max_length=100,
         default="Протокол ПТ",
@@ -451,7 +449,7 @@ class GeneralDrawingUnit(models.Model):
 
     category = models.CharField(max_length=50, default='ВО СЕ', verbose_name="Категория")
     name = models.CharField(max_length=100, verbose_name="Наименование")
-    desig_document = models.CharField(max_length=50, unique=True, verbose_name="Обозначение изделия")
+    desig_document = models.CharField(max_length=50, unique=True, null=True, verbose_name="Обозначение изделия")
     info_format = models.CharField(max_length=20, choices=INFO_FORMAT_CHOICES, default='ДЭ', verbose_name="Формат представления информации")
     primary_use = models.CharField(max_length=100, default='СИ.40522001.000.13ВПТ', verbose_name="Первичное применение")
     change_number = models.CharField(max_length=20, default='Изм. 1', verbose_name="Номер изменения")
@@ -614,7 +612,7 @@ class DrawingPartUnit(models.Model):
 class ElectronicModelPartUnit(models.Model):
     category = models.CharField(default='ЭМД СЕ', max_length=100, verbose_name="Категория")
     name = models.CharField(max_length=100, verbose_name="Наименование")
-    desig_document = models.CharField(max_length=50, unique=True, default=1, verbose_name="Обозначение изделия")
+    desig_document = models.CharField(max_length=50, unique=True, default='1', verbose_name="Обозначение изделия")
     info_format = models.CharField(max_length=50, default='ДЭ', verbose_name="Формат представления информации")
     primary_use = models.CharField(max_length=100, default='СИ.40522001.000.13ВПТ', verbose_name="Первичное применение")
     change_number = models.CharField(max_length=20, default='Изм. 1', verbose_name="Номер изменения")
@@ -689,7 +687,7 @@ class DrawingPartProduct(models.Model):
 
     category = models.CharField(max_length=50, default="ЧД ВО", verbose_name="Категория")
     name = models.CharField(max_length=100, verbose_name="Наименование")
-    desig_document = models.CharField(max_length=50, unique=True, default=1, verbose_name="Обозначение изделия")
+    desig_document = models.CharField(max_length=50, unique=True, default='1', verbose_name="Обозначение изделия")
     info_format = models.CharField(max_length=10, choices=INFO_FORMAT_CHOICES, default="ДЭ", verbose_name="Формат представления информации")
     primary_use = models.CharField(max_length=100, default='СИ.40522001.000.13ВПТ', verbose_name="Первичное применение")
     change_number = models.CharField(max_length=20, default='Изм. 1', verbose_name="Номер изменения")
@@ -721,7 +719,7 @@ class DrawingPartProduct(models.Model):
 class ElectronicModelPartProduct(models.Model):
     category = models.CharField(max_length=50, default="ЭМД ВО", verbose_name="Категория")
     name = models.CharField(max_length=100, verbose_name="Наименование")
-    desig_document = models.CharField(max_length=50, unique=True, default=1, verbose_name="Обозначение изделия")
+    desig_document = models.CharField(max_length=50, unique=True, default='1', verbose_name="Обозначение изделия")
     info_format = models.CharField(max_length=20, default="ДЭ", blank=True, verbose_name="Формат представления информации")
     primary_use = models.CharField(max_length=100, default='СИ.40522001.000.13ВПТ', verbose_name="Первичное применение")
     change_number = models.CharField(max_length=20, default='Изм. 1', verbose_name="Номер изменения")
@@ -828,7 +826,7 @@ class ListTechnicalProposal(models.Model):
         ('На утверждении', 'На утверждении'),
         ('Выпущен', 'Выпущен'),
         ('Заменен', 'Заменен'),
-        ('Аннулирован', 'Аннулирован'), 
+        ('Аннулирован', 'Аннулирован'),
         ('В архиве',  'В архиве')
         ]
 
@@ -844,7 +842,7 @@ class ListTechnicalProposal(models.Model):
     category = models.CharField(max_length=50, default='ВПТ', verbose_name="Категория")
     name = models.CharField(max_length=150, blank=True, verbose_name="Наименование")
     post = models.ForeignKey('Post', on_delete=models.CASCADE, null=True, blank=True, related_name='list_technical_proposals')
-    desig_document = models.CharField(max_length=50, unique=True, default=1, verbose_name="Обозначение изделия")
+    desig_document = models.CharField(max_length=50, unique=True, default='1', verbose_name="Обозначение изделия")
     info_format = models.CharField(max_length=20, choices=INFO_FORMAT_CHOICES, default='ДЭ', verbose_name="Формат представления информации")
     change_number = models.CharField(max_length=20, default='без изм', verbose_name="Номер изменения")
     author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Автор")
@@ -1081,7 +1079,7 @@ class Template(models.Model):
 
     version = models.CharField(
         max_length=5,
-        blank=True, default = '1', 
+        blank=True, default = '1',
         verbose_name="Версия"
     )
 
