@@ -16,14 +16,7 @@ from .models import ReportTechnicalProposal
 from .models import AddReportTechnicalProposal
 from .models import ProtocolTechnicalProposal
 from crm.models import Notifications, Customer, Decision_maker, Deal, Product, Deal_stage, Call, Letter
-from .models import TechTask
-from .models import (
-    OKRTask,
-    Template,
-    ReworkTask,
-    WorkPlan,
-)
-
+from .models import TechnicalAssignment, TaskForDesignWork, RevisionTask, WorkAssignment
 
 
 
@@ -399,61 +392,33 @@ admin.site.register(Product, ProductAdmin)
 admin.site.register(Deal_stage, Deal_stageAdmin)
 admin.site.register(Notifications) 
 
-@admin.register(OKRTask)
-class OKRTaskAdmin(admin.ModelAdmin):
-    list_display = ('name', 'version', 'status', 'created_by', 'created_at', 'updated_at')
-    search_fields = ('name', 'version')
-    list_filter = ('status', 'priority', 'category')
-    readonly_fields = ('updated_at',)
 
 
-@admin.register(Template)
-class TemplateAdmin(admin.ModelAdmin):
-    list_display = ('name', 'version', 'template_type', 'status', 'created_by', 'created_at')
-    search_fields = ('name', 'template_type')
-    list_filter = ('status', 'access_level')
-    readonly_fields = ('updated_at',)
+@admin.register(TaskForDesignWork)
+class TaskForDesignWorkAdmin(admin.ModelAdmin):
+    list_display = ('name', 'category', 'author', 'date_of_creation', 'status', 'version')
+    search_fields = ('name', 'author__username', 'current_responsible__username')
+    list_filter = ('status', 'priority', 'language')
+    readonly_fields = ('date_of_creation', 'date_of_change')
 
 
-@admin.register(ReworkTask)
-class ReworkTaskAdmin(admin.ModelAdmin):
-    list_display = ('name', 'version', 'status', 'created_by', 'created_at')
-    search_fields = ('name', 'version')
-    list_filter = ('status', 'priority',)
-    readonly_fields = ('updated_at',)
+@admin.register(RevisionTask)
+class RevisionTaskAdmin(admin.ModelAdmin):
+    list_display = ('name', 'category', 'author', 'date_of_creation', 'status', 'version')
+    search_fields = ('name', 'author__username', 'current_responsible__username')
+    list_filter = ('status', 'priority', 'language')
+    readonly_fields = ('date_of_creation', 'date_of_change')
 
 
-@admin.register(WorkPlan)
-class WorkPlanAdmin(admin.ModelAdmin):
-    list_display = ('name', 'version', 'status', 'created_by', 'created_at')
-    search_fields = ('name', 'version')
-    list_filter = ('status', 'priority',)
-    readonly_fields = ('updated_at',)
+@admin.register(WorkAssignment)
+class WorkAssignmentAdmin(admin.ModelAdmin):
+    list_display = ('name', 'category', 'author', 'deadline', 'result', 'version')
+    search_fields = ('name', 'author__username', 'current_responsible__username')
+    list_filter = ('result',)
+    readonly_fields = ('date_of_creation', 'date_of_change')
 
-@admin.register(TechTask)
-class TechTaskAdmin(admin.ModelAdmin):
-    list_display = (
-        'name', 'version', 'status', 'created_by', 'created_at', 'updated_at', 'editor'
-    )
-    search_fields = ('name', 'version')
-    list_filter = ('status', 'access_level')
-    readonly_fields = ('updated_at',)
-
-    fieldsets = (
-        ('Основная информация', {
-            'fields': (
-                'name', 'version', 'status',
-            )
-        }),
-        ('Файловые и связные поля', {
-            'fields': (
-                'template', 'okr_task', 'rework_task', 'work_plan'
-            )
-        }),
-        ('Служебная информация', {
-            'fields': (
-                'created_by', 'created_at', 'updated_by', 'updated_at', 'editor',
-                'description', 'change_description', 'permission_level', 'access_level', 'uploaded_file'
-            )
-        }),
-    )
+@admin.register(TechnicalAssignment)
+class TechnicalAssignmentAdmin(admin.ModelAdmin):
+    list_display = ('name', 'author', 'date_of_creation', 'last_editor', 'date_of_change', 'current_responsible', 'version')
+    search_fields = ('name', 'author__username', 'current_responsible__username')
+    list_filter = ('access', 'security')
