@@ -15,7 +15,7 @@ from .models import ElectronicModelPartProduct
 from .models import ReportTechnicalProposal
 from .models import AddReportTechnicalProposal
 from .models import ProtocolTechnicalProposal
-from crm.models import Notifications, Customer, Decision_maker, Deal, Product, Deal_stage, Call, Letter
+from crm.models import Notifications, Customer, Decision_maker, Deal, Product, Deal_stage, Call, Letter, Company_branch, Meeting
 from .models import TechnicalAssignment, TaskForDesignWork, RevisionTask, WorkAssignment
 
 
