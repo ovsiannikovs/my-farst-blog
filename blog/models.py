@@ -1057,7 +1057,7 @@ class WorkAssignment(models.Model):
 
 
 class TechnicalAssignment(models.Model):
-    name = models.CharField(max_length=100, unique=True, default='name', verbose_name="наименование")
+    name = models.CharField(max_length=100, unique=True, default='Name', verbose_name="наименование")
     author = models.ForeignKey(User, related_name='created_assignments', null = True, on_delete=models.CASCADE, verbose_name="автор")
     date_of_creation = models.DateTimeField(default=timezone.now, verbose_name="Дата и время создания")
     last_editor = models.ForeignKey(User, related_name='edited_assignments', null = True, on_delete=models.CASCADE,
