@@ -2,53 +2,70 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
 
-# Заглушки / вспомогательные м
-class TechnicalAssignment(models.Model):
-    title = models.CharField(max_length=255)
-    def __str__(self): return self.title
 
 class technical_design(models.Model):
     title = models.CharField(max_length=255)
+
     def __str__(self): return self.title
+
 
 class prelim_design(models.Model):
     title = models.CharField(max_length=255)
+
     def __str__(self): return self.title
+
 
 class WorkingDocumentation(models.Model):
     title = models.CharField(max_length=255)
+
     def __str__(self): return self.title
+
 
 class PilotSample(models.Model):
     title = models.CharField(max_length=255)
+
     def __str__(self): return self.title
+
 
 class Procurement(models.Model):
     title = models.CharField(max_length=255)
+
     def __str__(self): return self.title
+
 
 class ProductionLaunch(models.Model):
     title = models.CharField(max_length=255)
+
     def __str__(self): return self.title
+
 
 class Production(models.Model):
     title = models.CharField(max_length=255)
+
     def __str__(self): return self.title
+
 
 class Sales(models.Model):
     title = models.CharField(max_length=255)
+
     def __str__(self): return self.title
+
 
 class Service(models.Model):
     title = models.CharField(max_length=255)
+
     def __str__(self): return self.title
+
 
 class Patenting(models.Model):
     title = models.CharField(max_length=255)
+
     def __str__(self): return self.title
+
 
 class ConformityAssessment(models.Model):
     title = models.CharField(max_length=255)
+
     def __str__(self): return self.title
 
 
@@ -63,32 +80,49 @@ class Post(models.Model):
         ('1-', '1-'),
         ('1', '1'),
     ]
+
     name = models.CharField(max_length=100, verbose_name="Наименование")
-    desig_document = models.CharField(max_length=50, null=True, verbose_name="Обозначение изделия")
-    author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_posts', verbose_name="Автор")
-    last_editor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='edited_posts', verbose_name="Последний редактор")
-    current_responsible = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='responsible_posts', verbose_name="Текущий ответственный")
+    desig_document = models.CharField(max_length=50, null = True, verbose_name="Обозначение изделия")
+    author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_posts',
+                               verbose_name="Автор")
+    last_editor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='edited_posts',
+                                    verbose_name="Последний редактор")
+    current_responsible = models.ForeignKey(User, on_delete=models.SET_NULL, null=True,
+                                            related_name='responsible_posts', verbose_name="Текущий ответственный")
     date_of_creation = models.DateTimeField(default=timezone.now, verbose_name="Дата и время создания")
     date_of_change = models.DateTimeField(auto_now=True, verbose_name="Дата и время последнего изменения")
     version = models.CharField(max_length=20, default='1', verbose_name="Версия")
-    version_diff = models.TextField(max_length=1000, blank=True, default='Стартовая версия', verbose_name="Сравнение версий")
-    litera = models.CharField(max_length=20, choices=LITERA_CHOICES, default='П-', verbose_name="Стадия разработки (литера)")
-    trl = models.CharField(max_length=10, choices=TRL_CHOICES, default='1-', verbose_name="Уровень готовности технологий (TRL)")
+    version_diff = models.TextField(max_length=1000, blank=True, default='Стартовая версия',
+                                    verbose_name="Сравнение версий")
+    litera = models.CharField(max_length=20, choices=LITERA_CHOICES, default='П-',
+                              verbose_name="Стадия разработки (литера)")
+    trl = models.CharField(max_length=10, choices=TRL_CHOICES, default='1-',
+                           verbose_name="Уровень готовности технологий (TRL)")
 
     # Связи
-    technical_assignments = models.ManyToManyField(TechnicalAssignment, blank=True, verbose_name="Технические задания")
-    technical_proposal = models.OneToOneField('TechnicalProposal', on_delete=models.SET_NULL, blank=True, null=True, related_name='Post', verbose_name='Техническое предложение')
-    prelim_design = models.OneToOneField(prelim_design, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Эскизный проект")
-    technical_design = models.OneToOneField(technical_design, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Технический проект")
-    working_documentation = models.OneToOneField(WorkingDocumentation, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Рабочая КД")
-    pilot_samples = models.OneToOneField(PilotSample, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Опытные образцы")
+    technical_assignments = models.OneToOneField('TechnicalAssignment', on_delete=models.SET_NULL, blank=True,
+                                                 null=True, verbose_name="Технические задания")
+    technical_proposal = models.OneToOneField('TechnicalProposal', on_delete=models.SET_NULL, blank=True, null=True,
+                                              related_name='Post', verbose_name='Техническое предложение')
+    prelim_design = models.OneToOneField(prelim_design, on_delete=models.SET_NULL, null=True, blank=True,
+                                         verbose_name="Эскизный проект")
+    technical_design = models.OneToOneField(technical_design, on_delete=models.SET_NULL, null=True, blank=True,
+                                            verbose_name="Технический проект")
+    working_documentation = models.OneToOneField(WorkingDocumentation, on_delete=models.SET_NULL, null=True, blank=True,
+                                                 verbose_name="Рабочая КД")
+    pilot_samples = models.OneToOneField(PilotSample, on_delete=models.SET_NULL, null=True, blank=True,
+                                         verbose_name="Опытные образцы")
     procurement = models.ManyToManyField(Procurement, blank=True, verbose_name="Закупки")
-    production_launch = models.OneToOneField(ProductionLaunch, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Постановка на производство")
-    production = models.OneToOneField(Production, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Производство")
+    production_launch = models.OneToOneField(ProductionLaunch, on_delete=models.SET_NULL, null=True, blank=True,
+                                             verbose_name="Постановка на производство")
+    production = models.OneToOneField(Production, on_delete=models.SET_NULL, null=True, blank=True,
+                                      verbose_name="Производство")
     sales = models.OneToOneField(Sales, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Продажи")
-    service = models.OneToOneField(Service, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Сервисное обслуживание")
+    service = models.OneToOneField(Service, on_delete=models.SET_NULL, null=True, blank=True,
+                                   verbose_name="Сервисное обслуживание")
     patenting = models.ManyToManyField(Patenting, blank=True, verbose_name="Патентование")
-    conformity_assessment = models.OneToOneField(ConformityAssessment, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Подтверждение соответствия")
+    conformity_assessment = models.OneToOneField(ConformityAssessment, on_delete=models.SET_NULL, null=True, blank=True,
+                                                 verbose_name="Подтверждение соответствия")
 
     class Meta:
         verbose_name = "Разработка"
@@ -127,12 +161,14 @@ class GeneralDrawingProduct(models.Model):
     class Meta:
         verbose_name = 'Чертеж общего вида изделия'
         verbose_name_plural = 'Чертежи общего вида изделия'
+
     def __str__(self):
         return self.name
+
     def __str__(self): return self.name
 
-class ElectronicModelProduct(models.Model):
 
+class ElectronicModelProduct(models.Model):
     STATUS_CHOICES = [
         ('Зарегистрирован', 'Зарегистрирован'),
         ('Рабочий вариант', 'Рабочий вариант'),
@@ -193,11 +229,12 @@ class ElectronicModelProduct(models.Model):
     class Meta:
         verbose_name = 'Электронная модель продукта'
         verbose_name_plural = 'Электронные модели продукта'
+
     def __str__(self):
         return self.name
 
-class GeneralElectricalDiagram(models.Model):
 
+class GeneralElectricalDiagram(models.Model):
     INFO_FORMAT_CHOICES = [
         ('ДЭ', 'ДЭ'),
         ('ДБ', 'ДБ'),
@@ -258,11 +295,12 @@ class GeneralElectricalDiagram(models.Model):
     class Meta:
         verbose_name = 'Схема электрическая общая'
         verbose_name_plural = 'Схемы электрические общие'
+
     def __str__(self):
         return self.name
 
-class SoftwareProduct(models.Model):
 
+class SoftwareProduct(models.Model):
     STATUS_CHOICES = [
         ('Зарегистрирован', 'Зарегистрирован'),
         ('Рабочий вариант', 'Рабочий вариант'),
@@ -311,11 +349,12 @@ class SoftwareProduct(models.Model):
     class Meta:
         verbose_name = 'Программное обеспечение Технического предложения'
         verbose_name_plural = 'Программные обеспечения Технического предложения'
+
     def __str__(self):
         return self.name
 
-class ReportTechnicalProposal(models.Model):
 
+class ReportTechnicalProposal(models.Model):
     category = models.CharField(max_length=50, default="ПЗ ПТ", verbose_name="Категория")
 
     name = models.CharField(max_length=100, verbose_name="Наименование")
@@ -370,8 +409,10 @@ class ReportTechnicalProposal(models.Model):
     class Meta:
         verbose_name = 'Пояснительна записка Технического предложения'
         verbose_name_plural = 'Пояснительные записки Технического предложения'
+
     def __str__(self):
         return self.name
+
 
 class ProtocolTechnicalProposal(models.Model):
     id = models.BigAutoField(primary_key=True, unique=True)
@@ -412,8 +453,8 @@ class ProtocolTechnicalProposal(models.Model):
     def __str__(self):
         return f"{self.name} — {self.version}"
 
-class GeneralDrawingUnit(models.Model):
 
+class GeneralDrawingUnit(models.Model):
     INFO_FORMAT_CHOICES = [
         ('ДБ', 'ДБ'),
         ('ДЭ', 'ДЭ'),
@@ -475,11 +516,12 @@ class GeneralDrawingUnit(models.Model):
     class Meta:
         verbose_name = 'Чертеж общего вида сборочной единицы'
         verbose_name_plural = 'Чертежи общего вида сборочной еденицы'
+
     def __str__(self):
         return self.name
 
-class ElectronicModelUnit(models.Model):
 
+class ElectronicModelUnit(models.Model):
     INFO_FORMAT_CHOICES = [
         ('ДЭ КД', 'Электронный конструкторский документ'),
         ('ДЭ', 'Электронный документ'),
@@ -541,13 +583,12 @@ class ElectronicModelUnit(models.Model):
     class Meta:
         verbose_name = 'Электронная модель сборочной единицы'
         verbose_name_plural = 'Электронные модели сборочной единицы'
+
     def __str__(self):
         return self.name
 
 
-
 class DrawingPartUnit(models.Model):
-
     INFO_FORMAT_CHOICES = [
         ('ДЭ КД', 'Электронный конструкторский документ'),
         ('ДЭ', 'Электронный документ'),
@@ -606,8 +647,10 @@ class DrawingPartUnit(models.Model):
     class Meta:
         verbose_name = 'Чертеж детали сборочной единицы'
         verbose_name_plural = 'Чертежи детали сборочной единицы'
+
     def __str__(self):
         return self.name
+
 
 class ElectronicModelPartUnit(models.Model):
     category = models.CharField(default='ЭМД СЕ', max_length=100, verbose_name="Категория")
@@ -642,8 +685,8 @@ class ElectronicModelPartUnit(models.Model):
     def __str__(self):
         return f"{self.desig_document} — {self.name}"
 
-class DrawingPartProduct(models.Model):
 
+class DrawingPartProduct(models.Model):
     INFO_FORMAT_CHOICES = [
         ("ДЭ", "ДЭ"),
         ("ДЭ КД", "ДЭ КД"),
@@ -713,8 +756,10 @@ class DrawingPartProduct(models.Model):
     class Meta:
         verbose_name = 'Чертеж детали изделия'
         verbose_name_plural = 'Чертежи детали изделия'
+
     def __str__(self):
         return f"{self.desig_document} — {self.name}"
+
 
 class ElectronicModelPartProduct(models.Model):
     category = models.CharField(max_length=50, default="ЭМД ВО", verbose_name="Категория")
@@ -745,11 +790,12 @@ class ElectronicModelPartProduct(models.Model):
     class Meta:
         verbose_name = 'Электронная модель детали изделия'
         verbose_name_plural = 'Электронные модели детали изделия'
+
     def __str__(self):
         return f"{self.desig_document} — {self.name}"
 
-class AddReportTechnicalProposal(models.Model):
 
+class AddReportTechnicalProposal(models.Model):
     category = models.CharField(max_length=50, default="ПЗ ПТ. Приложение", verbose_name="Категория")
 
     name = models.CharField(max_length=100, verbose_name="Наименование")
@@ -812,8 +858,8 @@ class AddReportTechnicalProposal(models.Model):
     def __str__(self):
         return self.name or f"ПЗ ПТ. Приложение {self.desig_document or self.id}"
 
-class ListTechnicalProposal(models.Model):
 
+class ListTechnicalProposal(models.Model):
     INFO_FORMAT_CHOICES = [
         ('ДБ', 'ДБ'),
         ('ДЭ', 'ДЭ'),
@@ -827,9 +873,8 @@ class ListTechnicalProposal(models.Model):
         ('Выпущен', 'Выпущен'),
         ('Заменен', 'Заменен'),
         ('Аннулирован', 'Аннулирован'),
-        ('В архиве',  'В архиве')
-        ]
-
+        ('В архиве', 'В архиве')
+    ]
 
     PRIORITY_CHOICES = [
         ('Срочно', 'Срочно'),
@@ -837,7 +882,6 @@ class ListTechnicalProposal(models.Model):
         ('Средний', 'Средний'),
         ('Низкий', 'Низкий'),
     ]
-
 
     category = models.CharField(max_length=50, default='ВПТ', verbose_name="Категория")
     name = models.CharField(max_length=150, blank=True, verbose_name="Наименование")
@@ -864,7 +908,6 @@ class ListTechnicalProposal(models.Model):
     language = models.CharField(max_length=10, default='rus', verbose_name="Язык")
     uploaded_file = models.FileField(upload_to='uploads/', blank = True, verbose_name="Загружаемый файл")
 
-
     class Meta:
         verbose_name = 'Ведомость технического предложения'
         verbose_name_plural = 'Ведомости технического предложения'
@@ -872,7 +915,6 @@ class ListTechnicalProposal(models.Model):
 
 # Модель TechnicalProposal
 class TechnicalProposal(models.Model):
-
     LITERA_CHOICES = [
         ('П-', 'П-'),
         ('П', 'П'),
@@ -915,488 +957,143 @@ class TechnicalProposal(models.Model):
 
     def __str__(self): return self.name
 
-class TechTask(models.Model):
-    name = models.CharField(max_length=200, unique=True, verbose_name="Категория")
 
-
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='techtasks_created', verbose_name="Автор")
-    created_at = models.DateTimeField(default=timezone.now, verbose_name="Дата и время создания")
-
-    updated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True,related_name='techtasks_updated', verbose_name="Последний редактор")
-    updated_at = models.DateTimeField(auto_now=True, verbose_name="Дата и время последнего изменения")
-
-    editor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True,related_name='techtasks_editing', verbose_name="Текущий редактор")
-
-    description = models.TextField(max_length=3000, blank=True, null=True, verbose_name='Описание')
-
-    change_description = models.TextField(max_length=1000, blank=True, default='Стартовая версия', verbose_name="Сравнение версий")
-    version = models.CharField(max_length=20, blank=True, default='1', verbose_name="Версия")
-
-    STATUS_CHOICES = [
-        ('TRL1', 'TRL 1 – Базовые принципы наблюдаемы'),
-        ('TRL2', 'TRL 2 – Сформулирована концепция технологии'),
-    ]
-    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='TRL1', verbose_name="Статус")
-
-    template = models.OneToOneField('Template', on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Шаблон ТЗ на ОКР")
-    okr_task = models.OneToOneField('OKRTask', on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Тз на ОКР")
-    work_plan = models.OneToOneField('WorkPlan', on_delete=models.SET_NULL, null=True, blank=True, verbose_name="План работ по ТЗ на ОКР")
-    rework_task = models.OneToOneField('ReworkTask', on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Тз на доработку")
-
-    ACCESS_LEVELS = [
-        ('О', 'Общий'),
-        ('К', 'Конфиденциально'),
-        ('С', 'Секретно'),
-        ('СС', 'Совершенно секретно'),
-    ]
-    access_level = models.CharField(max_length=2, choices=ACCESS_LEVELS, default='О', verbose_name="Права доступа")
-
-    PERMISSIONS_CHOICES = [
-        (0, 'Ничего не разрешено'),
-        (1, 'Исполнение'),
-        (2, 'Запись'),
-        (3, 'Запись и исполнение'),
-        (4, 'Чтение'),
-        (5, 'Чтение и исполнение'),
-        (6, 'Чтение и запись'),
-        (7, 'Чтение, запись и исполнение'),
-    ]
-    permission_level = models.PositiveSmallIntegerField(choices=PERMISSIONS_CHOICES, default=7, verbose_name="Уровень доступа")
-
-    uploaded_file = models.FileField(upload_to='uploads/', blank = True, verbose_name="Загружаемый файл")
+class TaskForDesignWork(models.Model):
+    category = models.CharField(max_length=100, default="ТЗ ОКР", verbose_name="наименование")
+    name = models.CharField(max_length=100, unique=True, verbose_name="категория")
+    info_format = models.CharField(max_length=100, default="оригинал ДЭ", blank=True, null=True,
+                                   verbose_name="формат предоставления информации")
+    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name="created_designtasks", verbose_name="автор")
+    date_of_creation = models.DateTimeField(default=timezone.now, verbose_name="Дата и время создания")
+    last_editor = models.ForeignKey(User, on_delete=models.CASCADE, related_name="edited_designtasks",
+                                    verbose_name="последний редактор")
+    date_of_change = models.DateTimeField(auto_now=True, verbose_name="Дата и время последнего изменения")
+    current_responsible = models.ForeignKey(User, on_delete=models.CASCADE, related_name="responsible_designtasks",
+                                            verbose_name="текущий ответственный")
+    status = models.CharField(max_length=50, default="Зарегистрирован", verbose_name="статус")
+    priority = models.CharField(max_length=50, blank=True, null=True, verbose_name="приоритет")
+    version = models.CharField(max_length=3, blank=True, null=True, verbose_name="версия")
+    version_diff = models.TextField(max_length=1000, blank=True, null=True, verbose_name="разница версий")
+    validity_date = models.DateField(blank=True, null=True, verbose_name="срок действия")
+    subscribers = models.TextField(blank=True, null=True, verbose_name="внешние и внутренние получатели")
+    related_documents = models.TextField(blank=True, null=True, verbose_name="связанные сопроводительные документы")
+    pattern = models.CharField(max_length=100, blank=True, null=True, verbose_name="шаблон")
+    develop_org = models.CharField(max_length=100, blank=True, null=True, verbose_name="организация - разработчик")
+    language = models.CharField(max_length=7, blank=True, null=True, verbose_name="язык")
+    uploaded_file = models.FileField(upload_to='design_tasks/', blank=True, null=True, verbose_name="загружаемый файл")
+    add_task_for_design_work = models.FileField(upload_to='design_tasks/add/', blank=True, null=True,
+                                                verbose_name="приложение к ТЗ")
+    plan_for_design_work = models.FileField(upload_to='design_tasks/plan/', blank=True, null=True,
+                                            verbose_name="план работ по ТЗ")
+    route = models.CharField(max_length=255, blank=True, null=True, verbose_name="Маршрут")
 
     class Meta:
-        verbose_name = "Техническое задание"
-        verbose_name_plural = "Технические задания"
+        verbose_name = 'Техническое задание на ОКР'
+        verbose_name_plural = 'Технические задания на ОКР'
 
     def __str__(self):
         return self.name
 
-class OKRTask(models.Model):
 
-    name = models.CharField(max_length=200, unique=True, verbose_name="Категория")
-
-
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='okr_created', verbose_name="Автор")
-    created_at = models.DateTimeField(default=timezone.now,verbose_name="Дата и время создания")
-
-    updated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True,related_name='okr_updated', verbose_name="Последний редактор")
-    updated_at = models.DateTimeField(auto_now=True, verbose_name="Дата и время последнего изменения")
-
-    editor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True,related_name='okr_editing', verbose_name="Текущий редактор")
-
-    change_description = models.TextField(max_length=1000, blank=True, default='Стартовая версия', verbose_name="Сравнение версий")
-    version = models.CharField(max_length=20, blank=True, default='1', verbose_name="Версия")
-    file = models.FileField(upload_to='okr_tasks/', blank=True, verbose_name="Файл")
-    application = models.CharField(max_length=50, blank=True, verbose_name="Формат файла")
-
-    STATUS_CHOICES = [
-        ('draft', 'Рабочий вариант'),
-        ('development', 'Разработка'),
-        ('checking', 'Проверка'),
-        ('checked', 'Проверен'),
-        ('on_approval', 'На согласовании'),
-        ('approved', 'Согласован'),
-        ('on_signing', 'На утверждении'),
-        ('signed', 'Утвержден'),
-        ('rejected', 'Отклонен'),
-        ('released', 'Выпущен'),
-        ('frozen', 'Заморожен'),
-        ('replaced', 'Заменен'),
-        ('blocked', 'Заблокирован'),
-        ('annulled', 'Аннулирован'),
-        ('revision', 'На пересмотре'),
-        ('archived', 'Архив'),
-    ]
-    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='draft', verbose_name="Статус")
-
-    PRIORITY_CHOICES = [
-        ('urgent', 'Срочно'),
-        ('high', 'Высокий'),
-        ('medium', 'Средний'),
-        ('low', 'Низкий'),
-    ]
-    priority = models.CharField(max_length=30, choices=PRIORITY_CHOICES, blank=True, null=True, verbose_name="Приоритет")
-
-    approval_cycle = models.PositiveSmallIntegerField(default=1, verbose_name="Цикл согласования")
-
-    CATEGORY_CHOICES = [
-        ('ТЗ', 'Техническое задание'),
-        ('СП', 'Спецификация'),
-        ('СБ', 'Сборочный чертеж'),
-        ('ЧД', 'Чертеж детали'),
-        ('РЭ', 'Руководство по эксплуатации'),
-        ('ШБ', 'Шаблон'),
-    ]
-    category = models.CharField(max_length=5, choices=CATEGORY_CHOICES, default='ТЗ', verbose_name="Категория")
-
-    expiration_date = models.DateField(null=True, blank=True, verbose_name="Срок действия")
-    recipients = models.CharField(max_length=200, blank=True, null=True, verbose_name="Внешние получатели")
-
-    related_documents = models.ManyToManyField('self', blank=True, symmetrical=False, verbose_name="Связанные сопроводительные документы")
-
-    TYPE_CHOICES = [
-        ('ОКР', 'ОКР'),
-        ('НИОКР', 'НИОКР'),
-        ('другое', 'Другое'),
-    ]
-    tech_task_type = models.CharField(max_length=30, choices=TYPE_CHOICES, verbose_name="Тип ТЗ")
-
-    PERMISSIONS_CHOICES = [
-        (0, 'Ничего не разрешено'),
-        (1, 'Исполнение'),
-        (2, 'Запись'),
-        (3, 'Запись и исполнение'),
-        (4, 'Чтение'),
-        (5, 'Чтение и исполнение'),
-        (6, 'Чтение и запись'),
-        (7, 'Чтение, запись и исполнение'),
-    ]
-    permission_level = models.PositiveSmallIntegerField(choices=PERMISSIONS_CHOICES, default=7, verbose_name="Права доступа")
-
-    ACCESS_LEVELS = [
-        ('О', 'Общий'),
-        ('К', 'Конфиденциально'),
-        ('С', 'Секретно'),
-        ('СС', 'Совершенно секретно'),
-    ]
-    access_level = models.CharField(max_length=2, choices=ACCESS_LEVELS, default='О', verbose_name="Уровень доступа")
+class RevisionTask(models.Model):
+    category = models.CharField(max_length=100, default="ТЗ Д", verbose_name="категория")
+    name = models.CharField(max_length=100, unique=True, verbose_name="наименование")
+    info_format = models.CharField(max_length=100, default="оригинал ДЭ", blank=True, null=True, verbose_name="формат")
+    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name="created_revisions", verbose_name="автор")
+    date_of_creation = models.DateTimeField(default=timezone.now, verbose_name="Дата и время создания")
+    last_editor = models.ForeignKey(User, on_delete=models.CASCADE, related_name="edited_revisions",
+                                    verbose_name="последний редактор")
+    date_of_change = models.DateTimeField(auto_now=True, verbose_name="Дата и время последнего изменения")
+    current_responsible = models.ForeignKey(User, on_delete=models.CASCADE, related_name="responsible_revisions",
+                                            verbose_name="текущий ответственный")
+    status = models.CharField(max_length=50, default="Зарегистрирован", verbose_name="статус")
+    priority = models.CharField(max_length=50, blank=True, null=True, verbose_name="приоритет")
+    version = models.CharField(max_length=3, blank=True, null=True, verbose_name="версия")
+    version_diff = models.TextField(max_length=1000, blank=True, null=True, verbose_name="разница версий")
+    validity_date = models.DateField(blank=True, null=True, verbose_name="срок действия")
+    subscribers = models.TextField(blank=True, null=True, verbose_name="внешние и внутренние получатели")
+    related_documents = models.TextField(blank=True, null=True, verbose_name="связанный сопроводительные документы")
+    pattern = models.CharField(max_length=100, blank=True, null=True, verbose_name="шаблон")
+    develop_org = models.CharField(max_length=100, blank=True, null=True, verbose_name="организация - разработчик")
+    language = models.CharField(max_length=7, blank=True, null=True, verbose_name="язык")
+    uploaded_file = models.FileField(upload_to='revision_tasks/', blank=True, null=True, verbose_name="файл")
+    add_task_for_revision = models.FileField(upload_to='revision_tasks/add/', blank=True, null=True,
+                                             verbose_name="приложение к ТЗ")
+    plan_for_revision = models.FileField(upload_to='revision_tasks/plan/', blank=True, null=True,
+                                         verbose_name="план работ по ТЗ")
+    route = models.CharField(max_length=255, blank=True, null=True, verbose_name="Маршрут")
 
     class Meta:
-        verbose_name = "ТЗ на ОКР"
-        verbose_name_plural = "ТЗ на ОКР"
+        verbose_name = 'Техническое задание на доработку'
+        verbose_name_plural = 'Технические задания на доработку'
 
     def __str__(self):
         return self.name
 
-class Template(models.Model):
 
-    name = models.CharField(
-        max_length=100,
-        unique=True,
-        verbose_name="Наименование"
-    )
-
-    version = models.CharField(
-        max_length=5,
-        blank=True, default = '1',
-        verbose_name="Версия"
-    )
-
-    file = models.FileField(upload_to='templates/', blank=True, verbose_name="Файл")
-    application = models.CharField(
-        max_length=50,
-        blank=True,
-        verbose_name="Формат файла"
-    )
-
-    created_by = models.ForeignKey(User, related_name='template_created', on_delete=models.PROTECT, verbose_name="Автор")
-    created_at = models.DateTimeField(default=timezone.now, verbose_name="Дата и время создания")
-
-    updated_by = models.ForeignKey(User, related_name='template_updated', on_delete=models.PROTECT, verbose_name="Последний редактор")
-    updated_at = models.DateTimeField(auto_now=True, verbose_name="Дата и время последнего изменения")
-
-    editor = models.ForeignKey(User, related_name='template_editor', null=True, blank=True, on_delete=models.SET_NULL, verbose_name="Текущий ответственный")
-
-    change_description = models.TextField(max_length=1000, blank=True, null=True, default ='Стартовая версия', verbose_name="Сравнение версий")
-
-    STATUS_CHOICES = [
-        ('draft', 'Рабочий вариант'),
-        ('development', 'Разработка'),
-        ('checking', 'Проверка'),
-        ('checked', 'Проверен'),
-        ('on_approval', 'На согласовании'),
-        ('approved', 'Согласован'),
-        ('on_signing', 'На утверждении'),
-        ('signed', 'Утвержден'),
-        ('rejected', 'Отклонен'),
-        ('released', 'Выпущен'),
-        ('frozen', 'Заморожен'),
-        ('replaced', 'Заменен'),
-        ('blocked', 'Заблокирован'),
-        ('annulled', 'Аннулирован'),
-        ('revision', 'На пересмотре'),
-        ('archived', 'Архив'),
-    ]
-    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='checking', verbose_name="Статус")
-
-    PRIORITY_CHOICES = [
-        ('urgent', 'Срочно'),
-        ('high', 'Высокий'),
-        ('medium', 'Средний'),
-        ('low', 'Низкий'),
-    ]
-    priority = models.CharField(max_length=30, choices=PRIORITY_CHOICES, blank=True, null=True, verbose_name="Приоритет")
-
-    approval_cycle = models.PositiveSmallIntegerField(default=1, verbose_name="Цикл согласования")
-
-    CATEGORY_CHOICES = [
-        ('ТЗ', 'Техническое задание'),
-        ('СП', 'Спецификация'),
-        ('СБ', 'Сборочный чертеж'),
-        ('ЧД', 'Чертеж детали'),
-        ('РЭ', 'Руководство по эксплуатации'),
-        ('ШБ', 'Шаблон'),
-    ]
-    category = models.CharField(max_length=5, choices=CATEGORY_CHOICES, default='ШБ', verbose_name="Категория")
-
-    expiration_date = models.DateField(null=True, blank=True, verbose_name="Срок действия")
-    recipients = models.CharField(max_length=200, blank=True, null=True, verbose_name="Внешние получатели")
-
-    related_documents = models.ManyToManyField('self', blank=True, symmetrical=False, verbose_name="Связанные сопроводительные документы")
-
-    TYPE_CHOICES = [
-        ('ТЗ ОКР', 'ТЗ ОКР'),
-        ('ТЗ НИОКР', 'ТЗ НИОКР'),
-        ('Паспорт', 'Паспорт'),
-        ('Другое', 'Другое'),
-    ]
-    template_type = models.CharField(max_length=50, choices=TYPE_CHOICES, blank=True, verbose_name="Тип ТЗ")
-
-    PERMISSIONS_CHOICES = [
-        (0, 'Ничего не разрешено'),
-        (1, 'Исполнение'),
-        (2, 'Запись'),
-        (3, 'Запись и исполнение'),
-        (4, 'Чтение'),
-        (5, 'Чтение и исполнение'),
-        (6, 'Чтение и запись'),
-        (7, 'Чтение, запись и исполнение'),
-    ]
-    permission_level = models.PositiveSmallIntegerField(choices=PERMISSIONS_CHOICES, default=7, verbose_name="Права доступа")
-
-    ACCESS_LEVELS = [
-        ('О', 'Общий'),
-        ('К', 'Конфиденциально'),
-        ('С', 'Секретно'),
-        ('СС', 'Совершенно секретно'),
-    ]
-    access_level = models.CharField(max_length=2, choices=ACCESS_LEVELS, default='О', verbose_name="Уровень доступа")
+class WorkAssignment(models.Model):
+    name = models.CharField(max_length=100, verbose_name="наименование")
+    category = models.CharField(max_length=100, default="РЗ", verbose_name="категория")
+    author = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="автор")
+    date_of_creation = models.DateTimeField(default=timezone.now, verbose_name="дата и время создания")
+    last_editor = models.ForeignKey(User, on_delete=models.CASCADE, related_name="edited_workassignments",
+                                    verbose_name="последний редактор")
+    date_of_change = models.DateTimeField(auto_now=True, verbose_name="Дата и время последнего изменения")
+    current_responsible = models.ForeignKey(User, on_delete=models.CASCADE, related_name="responsible_workassignments",
+                                            verbose_name="текущий ответственный")
+    version = models.CharField(max_length=3, blank=True, null=True, verbose_name="версия")
+    task = models.TextField(verbose_name="задача")
+    deadline = models.DateField(verbose_name="срок выполнения")
+    result = models.CharField(max_length=100, verbose_name="результат")
+    result_description = models.TextField(max_length=5000, blank=True, null=True, verbose_name="описание результата")
+    route = models.CharField(max_length=255, blank=True, null=True, verbose_name="Маршрут")
 
     class Meta:
-        verbose_name = "Шаблон ТЗ на ОКР"
-        verbose_name_plural = "Шаблон ТЗ на ОКР"
+        verbose_name = 'Рабочее задание'
+        verbose_name_plural = 'Рабочие задания'
 
     def __str__(self):
         return self.name
 
-class ReworkTask(models.Model):
 
-    name = models.CharField(
-        max_length=100,
-        unique=True,
-        verbose_name="Наименование"
-    )
+class TechnicalAssignment(models.Model):
+    name = models.CharField(max_length=100, unique=True, default='Name', verbose_name="наименование")
+    author = models.ForeignKey(User, related_name='created_assignments', null = True, on_delete=models.CASCADE, verbose_name="автор")
+    date_of_creation = models.DateTimeField(default=timezone.now, verbose_name="Дата и время создания")
+    last_editor = models.ForeignKey(User, related_name='edited_assignments', null = True, on_delete=models.CASCADE,
+                                    verbose_name="последний редактор")
+    date_of_change = models.DateTimeField(auto_now=True, verbose_name="Дата и время последнего изменения")
+    current_responsible = models.ForeignKey(User, related_name='responsible_assignments', null = True, on_delete=models.CASCADE,
+                                            verbose_name="такущий ответственный")
+    version = models.CharField(max_length=3, blank=True, null=True, verbose_name="версия")
+    version_diff = models.TextField(max_length=1000, blank=True, null=True, verbose_name="разница версий")
+    task_for_design_work = models.OneToOneField(TaskForDesignWork, on_delete=models.SET_NULL, null=True, blank=True,
+                                                verbose_name="Техническое задание на ОКР")
+    revision_task = models.OneToOneField(RevisionTask, on_delete=models.SET_NULL, null=True, blank=True,
+                                         verbose_name="Техническое задание на доработку")
+    work_assignment = models.OneToOneField(WorkAssignment, on_delete=models.SET_NULL, null=True, blank=True,
+                                           verbose_name="Рабочие задания")
+    route = models.CharField(max_length=255, blank=True, null=True, verbose_name="Маршрут")
 
-    version = models.CharField(
-        max_length=6, blank=True, default = '1',
-        verbose_name="Версия"
-    )
+    class AccessLevel(models.TextChoices):
+        READ = '4', 'Чтение'
+        WRITE = '2', 'Запись'
+        EXECUTE = '1', 'Исполнение'
+        FULL = '7', 'Чтение, запись и исполнение'
 
-    file = models.FileField(upload_to='rework_tasks/', blank=True, verbose_name="Файл")
-    application = models.CharField(
-        max_length=50, blank=True,
-        verbose_name="Формат файла"
-    )
+    access = models.CharField(max_length=1, choices=AccessLevel.choices, default=AccessLevel.FULL)
 
-    created_by = models.ForeignKey(User, related_name='reworktask_created', on_delete=models.PROTECT, verbose_name="Афтор")
-    created_at = models.DateTimeField(default=timezone.now, verbose_name="Дата и время создания")
+    class SecurityLevel(models.TextChoices):
+        OPEN = 'О', 'Общий'
+        CONFIDENTIAL = 'К', 'Конфиденциально'
+        SECRET = 'С', 'Секретно'
+        TOP_SECRET = 'СС', 'Совершенно секретно'
 
-    updated_by = models.ForeignKey(User, related_name='reworktask_updated', on_delete=models.PROTECT, verbose_name="Последний редактор")
-    updated_at = models.DateTimeField(auto_now=True, verbose_name="Дата и время последнего изменения")
-
-    editor = models.ForeignKey(User, related_name='reworktask_editor', null=True, blank=True, on_delete=models.SET_NULL, verbose_name="Текущий ответственный")
-
-    change_description = models.TextField(max_length=1000, blank=True, null=True, default = 'Стартовая версия', verbose_name="Сравнение версий")
-
-    STATUS_CHOICES = [
-        ('draft', 'Рабочий вариант'),
-        ('development', 'Разработка'),
-        ('checking', 'Проверка'),
-        ('checked', 'Проверен'),
-        ('on_approval', 'На согласовании'),
-        ('approved', 'Согласован'),
-        ('on_signing', 'На утверждении'),
-        ('signed', 'Утвержден'),
-        ('rejected', 'Отклонен'),
-        ('released', 'Выпущен'),
-        ('frozen', 'Заморожен'),
-        ('replaced', 'Заменен'),
-        ('blocked', 'Заблокирован'),
-        ('annulled', 'Аннулирован'),
-        ('revision', 'На пересмотре'),
-        ('archived', 'Архив'),
-    ]
-    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='on_approval', verbose_name="Статус")
-
-    PRIORITY_CHOICES = [
-        ('urgent', 'Срочно'),
-        ('high', 'Высокий'),
-        ('medium', 'Средний'),
-        ('low', 'Низкий'),
-    ]
-    priority = models.CharField(max_length=30, choices=PRIORITY_CHOICES, blank=True, null=True, verbose_name="Приоритет")
-
-    approval_cycle = models.PositiveSmallIntegerField(default=1, verbose_name="Цикл согласования")
-
-    CATEGORY_CHOICES = [
-        ('ТЗ', 'Техническое задание'),
-        ('СП', 'Спецификация'),
-        ('СБ', 'Сборочный чертеж'),
-        ('ЧД', 'Чертеж детали'),
-        ('РЭ', 'Руководство по эксплуатации'),
-        ('ШБ', 'Шаблон'),
-    ]
-    category = models.CharField(max_length=5, choices=CATEGORY_CHOICES, default='ТЗ', verbose_name="Категория")
-
-    expiration_date = models.DateField(null=True, blank=True, verbose_name="Срок действия")
-    recipients = models.CharField(max_length=200, blank=True, null=True, verbose_name="Внешние получатели")
-
-    related_documents = models.ManyToManyField('self', blank=True, symmetrical=False, verbose_name="Связанные сопроводительные документы")
-
-    PERMISSIONS_CHOICES = [
-        (0, 'Ничего не разрешено'),
-        (1, 'Исполнение'),
-        (2, 'Запись'),
-        (3, 'Запись и исполнение'),
-        (4, 'Чтение'),
-        (5, 'Чтение и исполнение'),
-        (6, 'Чтение и запись'),
-        (7, 'Чтение, запись и исполнение'),
-    ]
-    permission_level = models.PositiveSmallIntegerField(choices=PERMISSIONS_CHOICES, default=7, verbose_name="Права доступа")
-
-    ACCESS_LEVELS = [
-        ('О', 'Общий'),
-        ('К', 'Конфиденциально'),
-        ('С', 'Секретно'),
-        ('СС', 'Совершенно секретно'),
-    ]
-    access_level = models.CharField(max_length=2, choices=ACCESS_LEVELS, default='О', verbose_name="Уровень доступа")
+    security = models.CharField(max_length=2, choices=SecurityLevel.choices, default=SecurityLevel.OPEN)
 
     class Meta:
-        verbose_name = "ТЗ на доработку"
-        verbose_name_plural = "ТЗ на доработку"
-
-    def __str__(self):
-        return self.name
-
-class WorkPlan(models.Model):
-
-    name = models.CharField(
-        max_length=100,
-        unique=True,
-        verbose_name="Наименование"
-    )
-
-    version = models.CharField(
-        max_length=6, blank=True, default = '1',
-        verbose_name="Версия"
-    )
-
-    file = models.FileField(upload_to='work_plans/', blank=True, verbose_name="Файл")
-    application = models.CharField(
-        max_length=50, blank=True,
-        verbose_name="Формат файла"
-    )
-
-    created_by = models.ForeignKey(User, related_name='workplan_created', on_delete=models.PROTECT, verbose_name="Автор")
-    created_at = models.DateTimeField(default=timezone.now, verbose_name="Дата и время создания")
-
-    updated_by = models.ForeignKey(User, related_name='workplan_updated', on_delete=models.PROTECT, verbose_name="Последний редактор")
-    updated_at = models.DateTimeField(auto_now=True, verbose_name="Дата и время последнего изменения")
-
-    editor = models.ForeignKey(User, related_name='workplan_editor', null=True, blank=True, on_delete=models.SET_NULL, verbose_name="Текущий ответственный")
-
-    change_description = models.TextField(max_length=1000, blank=True, null=True, default = 'Стартовая версия', verbose_name="Сравнение версий")
-
-    STATUS_CHOICES = [
-        ('draft', 'Рабочий вариант'),
-        ('development', 'Разработка'),
-        ('checking', 'Проверка'),
-        ('checked', 'Проверен'),
-        ('on_approval', 'На согласовании'),
-        ('approved', 'Согласован'),
-        ('on_signing', 'На утверждении'),
-        ('signed', 'Утвержден'),
-        ('rejected', 'Отклонен'),
-        ('released', 'Выпущен'),
-        ('frozen', 'Заморожен'),
-        ('replaced', 'Заменен'),
-        ('blocked', 'Заблокирован'),
-        ('annulled', 'Аннулирован'),
-        ('revision', 'На пересмотре'),
-        ('archived', 'Архив'),
-    ]
-    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='approved', verbose_name="Статус")
-
-    PRIORITY_CHOICES = [
-        ('urgent', 'Срочно'),
-        ('high', 'Высокий'),
-        ('medium', 'Средний'),
-        ('low', 'Низкий'),
-    ]
-    priority = models.CharField(max_length=30, choices=PRIORITY_CHOICES, blank=True, null=True, verbose_name="Приоритет")
-
-    approval_cycle = models.PositiveSmallIntegerField(default=1, verbose_name="Цикл согласования")
-
-    CATEGORY_CHOICES = [
-        ('ТЗ', 'Техническое задание'),
-        ('План', 'План'),
-        ('СП', 'Спецификация'),
-        ('СБ', 'Сборочный чертеж'),
-        ('ЧД', 'Чертеж детали'),
-        ('РЭ', 'Руководство по эксплуатации'),
-        ('ШБ', 'Шаблон'),
-    ]
-    category = models.CharField(max_length=5, choices=CATEGORY_CHOICES, default='План', verbose_name="Категория")
-
-    expiration_date = models.DateField(null=True, blank=True, verbose_name="Срок действия")
-    recipients = models.CharField(max_length=200, blank=True, null=True, verbose_name="Внешние получатели")
-
-    related_documents = models.ManyToManyField('self', blank=True, symmetrical=False, verbose_name="Связанные сопроводительные документы")
-
-    okr_task = models.OneToOneField(
-        'OKRTask',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='work_plan'
-        , verbose_name="ТЗ на ОКР"
-    )
-
-    rework_task = models.OneToOneField(
-        'ReworkTask',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='rework_plan'
-        , verbose_name="Тз на доработку"
-    )
-
-    PERMISSIONS_CHOICES = [
-        (0, 'Ничего не разрешено'),
-        (1, 'Исполнение'),
-        (2, 'Запись'),
-        (3, 'Запись и исполнение'),
-        (4, 'Чтение'),
-        (5, 'Чтение и исполнение'),
-        (6, 'Чтение и запись'),
-        (7, 'Чтение, запись и исполнение'),
-    ]
-    permission_level = models.PositiveSmallIntegerField(choices=PERMISSIONS_CHOICES, default=7, verbose_name="Права доступа")
-
-    ACCESS_LEVELS = [
-        ('О', 'Общий'),
-        ('К', 'Конфиденциально'),
-        ('С', 'Секретно'),
-        ('СС', 'Совершенно секретно'),
-    ]
-    access_level = models.CharField(max_length=2, choices=ACCESS_LEVELS, default='О', verbose_name="Уровень доступа")
-
-    class Meta:
-        verbose_name = "План работ по ТЗ на ОКР"
-        verbose_name_plural = "План работ по ТЗ на ОКР"
+        verbose_name = 'Техническое задание'
+        verbose_name_plural = 'Технические задания'
 
     def __str__(self):
         return self.name
