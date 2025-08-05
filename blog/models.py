@@ -82,7 +82,7 @@ class Post(models.Model):
     ]
 
     name = models.CharField(max_length=100, verbose_name="Наименование")
-    desig_document = models.CharField(max_length=50, verbose_name="Обозначение изделия")
+    desig_document = models.CharField(max_length=50, null = True, verbose_name="Обозначение изделия")
     author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_posts',
                                verbose_name="Автор")
     last_editor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='edited_posts',
@@ -1057,13 +1057,13 @@ class WorkAssignment(models.Model):
 
 
 class TechnicalAssignment(models.Model):
-    name = models.CharField(max_length=100, unique=True, verbose_name="наименование")
-    author = models.ForeignKey(User, related_name='created_assignments', on_delete=models.CASCADE, verbose_name="автор")
+    name = models.CharField(max_length=100, unique=True, default='name', verbose_name="наименование")
+    author = models.ForeignKey(User, related_name='created_assignments', null = True, on_delete=models.CASCADE, verbose_name="автор")
     date_of_creation = models.DateTimeField(default=timezone.now, verbose_name="Дата и время создания")
-    last_editor = models.ForeignKey(User, related_name='edited_assignments', on_delete=models.CASCADE,
+    last_editor = models.ForeignKey(User, related_name='edited_assignments', null = True, on_delete=models.CASCADE,
                                     verbose_name="последний редактор")
     date_of_change = models.DateTimeField(auto_now=True, verbose_name="Дата и время последнего изменения")
-    current_responsible = models.ForeignKey(User, related_name='responsible_assignments', on_delete=models.CASCADE,
+    current_responsible = models.ForeignKey(User, related_name='responsible_assignments', null = True, on_delete=models.CASCADE,
                                             verbose_name="такущий ответственный")
     version = models.CharField(max_length=3, blank=True, null=True, verbose_name="версия")
     version_diff = models.TextField(max_length=1000, blank=True, null=True, verbose_name="разница версий")
