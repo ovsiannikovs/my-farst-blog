@@ -17,6 +17,7 @@ from .models import AddReportTechnicalProposal
 from .models import ProtocolTechnicalProposal
 from crm.models import Notifications, Customer, Decision_maker, Deal, Product, Deal_stage, Call, Letter, Company_branch, Meeting
 from .models import TechnicalAssignment, TaskForDesignWork, RevisionTask, WorkAssignment
+from .forms import WorkAssignmentForm
 
 
 
@@ -35,12 +36,16 @@ class ListTechnicalProposalInline(admin.TabularInline):
             return False
         return True
 
+class TechnicalAssignmentInline(admin.TabularInline):  # или StackedInline
+    model = TechnicalAssignment
+    extra = 1
+
 
 @admin.register(Post)
 class PostAdmin(admin.ModelAdmin):
     list_display = ('name', 'desig_document', 'author', 'date_of_creation', 'date_of_change')
     readonly_fields = ('date_of_change',)
-    inlines = [ListTechnicalProposalInline]
+    inlines = [ListTechnicalProposalInline, TechnicalAssignmentInline]
 
     def save_formset(self, request, form, formset, change):
         instances = formset.save(commit=False)
@@ -51,9 +56,6 @@ class PostAdmin(admin.ModelAdmin):
             if not instance.name or not instance.name.strip():
                 instance.name = instance.post.name
 
-            # Если desig_document пустой или только пробелы — взять из головной модели
-            if not instance.desig_document or not instance.desig_document.strip():
-                instance.desig_document = instance.post.desig_document
 
             instance.save()
         formset.save_m2m()
@@ -102,7 +104,7 @@ class GeneralElectricalDiagramAdmin(admin.ModelAdmin):
 class SoftwareProductAdmin(admin.ModelAdmin):
     list_display = ('id', 'name', 'category', 'desig_document', 'status', 'version', 'date_of_creation')
     search_fields = ('name', 'desig_document', 'status')
-    list_filter = ('status', 'category', 'trl', 'version')
+    list_filter = ('status', 'category', 'version')
     readonly_fields = ('date_of_change',)
 
 @admin.register(GeneralDrawingUnit)
@@ -173,7 +175,7 @@ class ElectronicModelPartUnitAdmin(admin.ModelAdmin):
     )
     search_fields = ('name', 'desig_document', 'category')
     list_filter = ('status', 'trl', 'category', 'develop_org')
-    readonly_fields = ('date_of_change',)
+    readonly_fields = ('date_of_change', 'info_format')
 
     fieldsets = (
         (None, {
@@ -410,6 +412,17 @@ admin.site.register(Deal_stage, Deal_stageAdmin)
 admin.site.register(Notifications)
 
 
+class TaskForDesignWorkInline(admin.TabularInline):  # или StackedInline
+    model = TaskForDesignWork
+    extra = 1
+
+class RevisionTaskInline(admin.TabularInline):  # или StackedInline
+    model = RevisionTask
+    extra = 1
+
+class WorkAssignmentInline(admin.TabularInline):  # или StackedInline
+    model = WorkAssignment
+    extra = 1
 
 @admin.register(TaskForDesignWork)
 class TaskForDesignWorkAdmin(admin.ModelAdmin):
@@ -433,9 +446,12 @@ class WorkAssignmentAdmin(admin.ModelAdmin):
     search_fields = ('name', 'author__username', 'current_responsible__username')
     list_filter = ('result',)
     readonly_fields = ('date_of_creation', 'date_of_change')
+    form = WorkAssignmentForm
 
 @admin.register(TechnicalAssignment)
 class TechnicalAssignmentAdmin(admin.ModelAdmin):
     list_display = ('name', 'author', 'date_of_creation', 'last_editor', 'date_of_change', 'current_responsible', 'version')
     search_fields = ('name', 'author__username', 'current_responsible__username')
     list_filter = ('access', 'security')
+    inlines = [WorkAssignmentInline, RevisionTaskInline, TaskForDesignWorkInline]
+

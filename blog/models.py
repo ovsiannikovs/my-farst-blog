@@ -81,7 +81,7 @@ class Post(models.Model):
         ('1', '1'),
     ]
 
-    name = models.CharField(max_length=100, verbose_name="Наименование")
+    name = models.CharField(max_length=100, unique=True, verbose_name="Наименование")
     desig_document = models.CharField(max_length=50, null = True, verbose_name="Обозначение изделия")
     author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_posts',
                                verbose_name="Автор")
@@ -100,8 +100,8 @@ class Post(models.Model):
                            verbose_name="Уровень готовности технологий (TRL)")
 
     # Связи
-    technical_assignments = models.OneToOneField('TechnicalAssignment', on_delete=models.SET_NULL, blank=True,
-                                                 null=True, verbose_name="Технические задания")
+    #technical_assignments = models.OneToOneField('TechnicalAssignment', on_delete=models.SET_NULL, blank=True,
+                                                 #null=True, verbose_name="Технические задания")
     technical_proposal = models.OneToOneField('TechnicalProposal', on_delete=models.SET_NULL, blank=True, null=True,
                                               related_name='Post', verbose_name='Техническое предложение')
     prelim_design = models.OneToOneField(prelim_design, on_delete=models.SET_NULL, null=True, blank=True,
@@ -134,18 +134,43 @@ class Post(models.Model):
 
 # Вспомогательные сущности для TechnicalProposal
 class GeneralDrawingProduct(models.Model):
+
+    INFO_FORMAT_CHOICES = [
+        ('ДЭ', 'ДЭ'),
+        ('ДБ', 'ДБ'),
+    ]
+
+    STATUS_CHOICES = [
+        ('Зарегистрирован', 'Зарегистрирован'),
+        ('В разработке', 'В разработке'),
+        ('На проверке', 'На проверке'),
+        ('На утверждении', 'На утверждении'),
+        ('Выпущен', 'Выпущен'),
+        ('Заменен', 'Заменен'),
+        ('Аннулирован', 'Аннулирован'),
+        ('В архиве',  'В архиве')
+        ]
+
+
+    PRIORITY_CHOICES = [
+        ('Срочно', 'Срочно'),
+        ('Высокий', 'Высокий'),
+        ('Средний', 'Средний'),
+        ('Низкий', 'Низкий'),
+    ]
     category = models.CharField(max_length=50, default='ВО', verbose_name="Категория")
     name = models.CharField(max_length=100, default='ПАК СПМ 2.13 Чертеж общего вида изделия', verbose_name="Наименование")
-    desig_document = models.CharField(max_length=50, default='СИ.40522001.000.13ВО', verbose_name="Обозначение документа")
-    info_format = models.CharField(max_length=20, default='ДЭ', verbose_name="Формат представления информации")
+    desig_document = models.CharField(max_length=50, unique=True, verbose_name="Обозначение документа")
+    info_format = models.CharField(max_length=20, choices=INFO_FORMAT_CHOICES, verbose_name="Формат представления информации")
     primary_use = models.CharField(max_length=100, default='СИ.40522001.000.13ВПТ', verbose_name="Первичное применение")
     author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='gd_created_by', verbose_name="Автор")
     date_of_creation = models.DateTimeField(default=timezone.now, verbose_name="Дата и время создания")
+    change_number = models.CharField(max_length=20, default='Без изм.', verbose_name="Номер изменения")
     last_editor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='gd_edited_by', verbose_name="Последний редактор")
     date_of_change = models.DateTimeField(auto_now=True, verbose_name="Дата и время последнего изменения")
     current_responsible = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='gd_responsible', verbose_name="Текущий ответственный")
-    status = models.CharField(max_length=50, default='На согласовании', verbose_name="Статус (состояние)")
-    priority = models.CharField(max_length=30, blank=True, default='', verbose_name="Приоритет в работе")
+    status = models.CharField(max_length=50, choices=STATUS_CHOICES, verbose_name="Статус (состояние)")
+    priority = models.CharField(max_length=30, blank=True, choices=PRIORITY_CHOICES, verbose_name="Приоритет в работе")
     version = models.CharField(max_length=6, default='1', verbose_name="Версия")
     version_diff = models.TextField(max_length=1000, blank=True, default='Стартовая версия', verbose_name="Сравнение версий")
     litera = models.CharField(max_length=20, default='П-', verbose_name="Стадия разработки  (Литера)")
@@ -205,7 +230,7 @@ class ElectronicModelProduct(models.Model):
     desig_document = models.CharField(max_length=50, unique=True, default='СИ.40522001.000.13ЭМИ', verbose_name="Обозначение документа")
     info_format = models.CharField(max_length=20, default='ДЭ', verbose_name="Формат представления информации")
     primary_use = models.CharField(max_length=100, default='СИ.40522001.000.13ВПТ', verbose_name="Первичное применение")
-    change_number = models.CharField(max_length=20, default='Изм. 1', verbose_name="Номер изменения")
+    change_number = models.CharField(max_length=20, default='Без изм.', verbose_name="Номер изменения")
     author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='electronicmodel_author', verbose_name="Автор")
     date_of_creation = models.DateTimeField(default=timezone.now, verbose_name="Дата и время создания")
     last_editor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='electronicmodel_last_editor', verbose_name="Последний редактор")
@@ -242,23 +267,15 @@ class GeneralElectricalDiagram(models.Model):
 
     STATUS_CHOICES = [
         ('Зарегистрирован', 'Зарегистрирован'),
-        ('Рабочий вариант', 'Рабочий вариант'),
-        ('Разработка', 'Разработка'),
-        ('Проверка', 'Проверка'),
-        ('Проверен', 'Проверен'),
-        ('На согласовании', 'На согласовании'),
-        ('Согласован', 'Согласован'),
+        ('В разработке', 'В разработке'),
+        ('На проверке', 'На проверке'),
         ('На утверждении', 'На утверждении'),
-        ('Утвержден', 'Утвержден'),
-        ('Отклонен', 'Отклонен'),
         ('Выпущен', 'Выпущен'),
-        ('Заморожен', 'Заморожен'),
         ('Заменен', 'Заменен'),
-        ('Заблокирован', 'Заблокирован'),
         ('Аннулирован', 'Аннулирован'),
-        ('На пересмотре', 'На пересмотре'),
-        ('Архив', 'Архив'),
-    ]
+        ('В архиве',  'В архиве')
+        ]
+
 
     PRIORITY_CHOICES = [
         ('Срочно', 'Срочно'),
@@ -272,7 +289,7 @@ class GeneralElectricalDiagram(models.Model):
     desig_document = models.CharField(max_length=50, unique=True, default='СИ.40522001.000.13Э6', verbose_name="Обозначение документа")
     info_format = models.CharField(max_length=20, choices=INFO_FORMAT_CHOICES, default='ДЭ', verbose_name="Формат представления информации")
     primary_use = models.CharField(max_length=100, default='СИ.40522001.000.13ВПТ', verbose_name="Первичное применение")
-    change_number = models.CharField(max_length=20, default='Изм. 1', verbose_name="Номер изменения")
+    change_number = models.CharField(max_length=20, default='Без изм.', verbose_name="Номер изменения")
     author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Автор")
     date_of_creation = models.DateTimeField(default=timezone.now, verbose_name="Дата и время создания")
     last_editor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Последний редактор")
@@ -303,41 +320,34 @@ class GeneralElectricalDiagram(models.Model):
 class SoftwareProduct(models.Model):
     STATUS_CHOICES = [
         ('Зарегистрирован', 'Зарегистрирован'),
-        ('Рабочий вариант', 'Рабочий вариант'),
-        ('Разработка', 'Разработка'),
-        ('Проверка', 'Проверка'),
-        ('Проверен', 'Проверен'),
-        ('На согласовании', 'На согласовании'),
-        ('Согласован', 'Согласован'),
+        ('В разработке', 'В разработке'),
+        ('На проверке', 'На проверке'),
         ('На утверждении', 'На утверждении'),
-        ('Утвержден', 'Утвержден'),
-        ('Отклонен', 'Отклонен'),
         ('Выпущен', 'Выпущен'),
-        ('Заморожен', 'Заморожен'),
         ('Заменен', 'Заменен'),
-        ('Заблокирован', 'Заблокирован'),
         ('Аннулирован', 'Аннулирован'),
-        ('На пересмотре', 'На пересмотре'),
-        ('Архив', 'Архив'),
-    ]
+        ('В архиве',  'В архиве')
+        ]
 
+    PRIORITY_CHOICES = [
+        ('Срочно', 'Срочно'),
+        ('Высокий', 'Высокий'),
+        ('Средний', 'Средний'),
+        ('Низкий', 'Низкий'),
+    ]
     category = models.CharField(max_length=50, default='ПО ПТ', verbose_name="Категория")
     name = models.CharField(max_length=100, default='ПАК СПМ 2.13  Программное обеспечение. Техническое предложение', verbose_name="Наименование")
-    desig_document = models.CharField(max_length=50, unique=True, default='СИ.40522001.000.13ПО ПТ', verbose_name="Обозначение документа")
+    desig_document = models.CharField(max_length=50, default='СИ.40522001.000.13ПО ПТ', verbose_name="Обозначение документа")
     info_format = models.CharField(max_length=30, default='ДЭ', verbose_name="Формат представления информации")
-    primary_use = models.CharField(max_length=100, default='СИ.40522001.000.13ВПТ', verbose_name="Первичное применение")
-    change_number = models.CharField(max_length=20, default='Изм. 1', verbose_name="Номер изменения")
     author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Автор")
     date_of_creation = models.DateTimeField(default=timezone.now, verbose_name="Дата и время создания")
     last_editor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Последний редактор")
     date_of_change = models.DateTimeField(auto_now=True, verbose_name="Дата и время последнего изменения")
     current_responsible = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Текущий ответственный")
     status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='Зарегистрирован', verbose_name="Статус (состояние)")
-    priority = models.CharField(max_length=30, blank=True, default='', verbose_name="Приоритет в работе")
+    priority = models.CharField(max_length=30, blank=True, choices=PRIORITY_CHOICES, verbose_name="Приоритет в работе")
     version = models.CharField(max_length=6, default='1', verbose_name="Версия")
     version_diff = models.TextField(blank=True, default='Стартовая версия', verbose_name="Сравнение версий")
-    litera = models.CharField(max_length=2, default='П-', verbose_name="Стадия разработки  (Литера)")
-    trl = models.CharField(max_length=10, default='1-', verbose_name="Уровень готовности технологий (TRL)")
     validity_date = models.DateField(null=True, blank=True, verbose_name="Срок действия")
     subscribers = models.CharField(max_length=200, blank=True, default='', verbose_name="Внешние и внутренние получатели")
     related_documents = models.TextField(blank=True, default='', verbose_name='Связанные сопроводительные документы')
@@ -590,8 +600,8 @@ class ElectronicModelUnit(models.Model):
 
 class DrawingPartUnit(models.Model):
     INFO_FORMAT_CHOICES = [
-        ('ДЭ КД', 'Электронный конструкторский документ'),
-        ('ДЭ', 'Электронный документ'),
+        ('ДБ', 'ДБ'),
+        ('ДЭ', 'ДЭ'),
     ]
     PRIORITY_CHOICES = [
         ('Срочно', 'Срочно'),
@@ -624,7 +634,7 @@ class DrawingPartUnit(models.Model):
     desig_document = models.CharField(max_length=50, unique=True, default='1', verbose_name="Обозначение изделия")
     info_format = models.CharField(max_length=10, choices=INFO_FORMAT_CHOICES, default='ДЭ', verbose_name="Формат представления информации")
     primary_use = models.CharField(max_length=100, default='СИ.40522001.000.13ВПТ', verbose_name="Первичное применение")
-    change_number = models.CharField(max_length=20, default='Изм. 1', verbose_name="Номер изменения")
+    change_number = models.CharField(max_length=20, default='Без изм.', verbose_name="Номер изменения")
     author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Автор")
     date_of_creation = models.DateTimeField(default=timezone.now, verbose_name="Дата и время создания")
     last_editor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Последний редактор")
@@ -689,9 +699,7 @@ class ElectronicModelPartUnit(models.Model):
 class DrawingPartProduct(models.Model):
     INFO_FORMAT_CHOICES = [
         ("ДЭ", "ДЭ"),
-        ("ДЭ КД", "ДЭ КД"),
-        ("ТДЭ", "ТДЭ"),
-        ("ДБ КД", "ДБ КД"),
+        ("ДБ", "ДБ"),
     ]
     STATUS_CHOICES = [
         ('Зарегистрирован', 'Зарегистрирован'),
@@ -733,7 +741,7 @@ class DrawingPartProduct(models.Model):
     desig_document = models.CharField(max_length=50, unique=True, default='1', verbose_name="Обозначение изделия")
     info_format = models.CharField(max_length=10, choices=INFO_FORMAT_CHOICES, default="ДЭ", verbose_name="Формат представления информации")
     primary_use = models.CharField(max_length=100, default='СИ.40522001.000.13ВПТ', verbose_name="Первичное применение")
-    change_number = models.CharField(max_length=20, default='Изм. 1', verbose_name="Номер изменения")
+    change_number = models.CharField(max_length=20, default='Без изм.', verbose_name="Номер изменения")
     author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Автор")
     date_of_creation = models.DateTimeField(default=timezone.now, verbose_name="Дата и время создания")
     last_editor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Последний редактор")
@@ -959,9 +967,23 @@ class TechnicalProposal(models.Model):
 
 
 class TaskForDesignWork(models.Model):
-    category = models.CharField(max_length=100, default="ТЗ ОКР", verbose_name="наименование")
-    name = models.CharField(max_length=100, unique=True, verbose_name="категория")
-    info_format = models.CharField(max_length=100, default="оригинал ДЭ", blank=True, null=True,
+
+    INFO_FORMAT_CHOICES = [
+        ('ДБ', 'ДБ'),
+        ('ДЭ', 'ДЭ'),
+    ]
+
+    PRIORITY_CHOICES = [
+        ('Срочно', 'Срочно'),
+        ('Высокий', 'Высокий'),
+        ('Средний', 'Средний'),
+        ('Низкий', 'Низкий'),
+    ]
+
+    name = models.CharField(max_length=100, unique=True, blank=True, null=True, verbose_name="наименование")
+    category = models.CharField(max_length=100, default="ТЗ ОКР", verbose_name="категория")
+    technical_assignment = models.ForeignKey('TechnicalAssignment', on_delete=models.CASCADE, null=True, blank=True, related_name='task_for_design_works', verbose_name="Связанное техническое задание")
+    info_format = models.CharField(max_length=100, choices=INFO_FORMAT_CHOICES, blank=True, null=True,
                                    verbose_name="формат предоставления информации")
     author = models.ForeignKey(User, on_delete=models.CASCADE, related_name="created_designtasks", verbose_name="автор")
     date_of_creation = models.DateTimeField(default=timezone.now, verbose_name="Дата и время создания")
@@ -971,7 +993,7 @@ class TaskForDesignWork(models.Model):
     current_responsible = models.ForeignKey(User, on_delete=models.CASCADE, related_name="responsible_designtasks",
                                             verbose_name="текущий ответственный")
     status = models.CharField(max_length=50, default="Зарегистрирован", verbose_name="статус")
-    priority = models.CharField(max_length=50, blank=True, null=True, verbose_name="приоритет")
+    priority = models.CharField(max_length=50, blank=True, null=True, choices=PRIORITY_CHOICES, verbose_name="приоритет в работе")
     version = models.CharField(max_length=3, blank=True, null=True, verbose_name="версия")
     version_diff = models.TextField(max_length=1000, blank=True, null=True, verbose_name="разница версий")
     validity_date = models.DateField(blank=True, null=True, verbose_name="срок действия")
@@ -991,14 +1013,33 @@ class TaskForDesignWork(models.Model):
         verbose_name = 'Техническое задание на ОКР'
         verbose_name_plural = 'Технические задания на ОКР'
 
+    def save(self, *args, **kwargs):
+        if self.technical_assignment and not self.name:
+            self.name = self.technical_assignment.name
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return self.name
 
 
 class RevisionTask(models.Model):
+
+    INFO_FORMAT_CHOICES = [
+        ('ДБ', 'ДБ'),
+        ('ДЭ', 'ДЭ'),
+    ]
+
+    PRIORITY_CHOICES = [
+        ('Срочно', 'Срочно'),
+        ('Высокий', 'Высокий'),
+        ('Средний', 'Средний'),
+        ('Низкий', 'Низкий'),
+    ]
+
+    name = models.CharField(max_length=100, unique=True, blank=True, null=True, verbose_name="наименование")
     category = models.CharField(max_length=100, default="ТЗ Д", verbose_name="категория")
-    name = models.CharField(max_length=100, unique=True, verbose_name="наименование")
-    info_format = models.CharField(max_length=100, default="оригинал ДЭ", blank=True, null=True, verbose_name="формат")
+    technical_assignment = models.ForeignKey('TechnicalAssignment', on_delete=models.CASCADE, null=True, blank=True, related_name='revision_tasks', verbose_name="Связанное техническое задание")
+    info_format = models.CharField(max_length=100, choices=INFO_FORMAT_CHOICES, blank=True, null=True, verbose_name="формат")
     author = models.ForeignKey(User, on_delete=models.CASCADE, related_name="created_revisions", verbose_name="автор")
     date_of_creation = models.DateTimeField(default=timezone.now, verbose_name="Дата и время создания")
     last_editor = models.ForeignKey(User, on_delete=models.CASCADE, related_name="edited_revisions",
@@ -1007,9 +1048,9 @@ class RevisionTask(models.Model):
     current_responsible = models.ForeignKey(User, on_delete=models.CASCADE, related_name="responsible_revisions",
                                             verbose_name="текущий ответственный")
     status = models.CharField(max_length=50, default="Зарегистрирован", verbose_name="статус")
-    priority = models.CharField(max_length=50, blank=True, null=True, verbose_name="приоритет")
-    version = models.CharField(max_length=3, blank=True, null=True, verbose_name="версия")
-    version_diff = models.TextField(max_length=1000, blank=True, null=True, verbose_name="разница версий")
+    priority = models.CharField(max_length=50, blank=True, null=True, choices=PRIORITY_CHOICES, verbose_name="приоритет в работе")
+    version = models.CharField(max_length=3, blank=True, null=True, default='1', verbose_name="версия")
+    version_diff = models.TextField(max_length=1000, blank=True, null=True, default='стартовая версия', verbose_name="сравнение версий")
     validity_date = models.DateField(blank=True, null=True, verbose_name="срок действия")
     subscribers = models.TextField(blank=True, null=True, verbose_name="внешние и внутренние получатели")
     related_documents = models.TextField(blank=True, null=True, verbose_name="связанный сопроводительные документы")
@@ -1027,13 +1068,27 @@ class RevisionTask(models.Model):
         verbose_name = 'Техническое задание на доработку'
         verbose_name_plural = 'Технические задания на доработку'
 
+    def save(self, *args, **kwargs):
+        if self.technical_assignment and not self.name:
+            self.name = self.technical_assignment.name
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return self.name
 
 
 class WorkAssignment(models.Model):
-    name = models.CharField(max_length=100, verbose_name="наименование")
+
+    RESULT_CHOICES = [
+        ('Выполнено в срок', 'Выполнено в срок'),
+        ('Выполнено с переносом сроков', 'Выполнено с переносом сроков'),
+        ('Выполнено частично', 'Выполнено частично'),
+        ('Не выполнено', 'Не выполнено'),
+    ]
+
+    name = models.CharField(max_length=100, unique=True, blank=True, null=True, verbose_name="наименование")
     category = models.CharField(max_length=100, default="РЗ", verbose_name="категория")
+    technical_assignment = models.ForeignKey('TechnicalAssignment', on_delete=models.CASCADE, null=True, blank=True, related_name='work_assignments', verbose_name="Связанное техническое задание")
     author = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="автор")
     date_of_creation = models.DateTimeField(default=timezone.now, verbose_name="дата и время создания")
     last_editor = models.ForeignKey(User, on_delete=models.CASCADE, related_name="edited_workassignments",
@@ -1043,8 +1098,9 @@ class WorkAssignment(models.Model):
                                             verbose_name="текущий ответственный")
     version = models.CharField(max_length=3, blank=True, null=True, verbose_name="версия")
     task = models.TextField(verbose_name="задача")
+    acceptance_criteria= models.TextField(default= '---', verbose_name="критерий выполнения")
     deadline = models.DateField(verbose_name="срок выполнения")
-    result = models.CharField(max_length=100, verbose_name="результат")
+    result = models.CharField(max_length=100, choices=RESULT_CHOICES, blank=True, null=True, verbose_name="результат")
     result_description = models.TextField(max_length=5000, blank=True, null=True, verbose_name="описание результата")
     route = models.CharField(max_length=255, blank=True, null=True, verbose_name="Маршрут")
 
@@ -1052,12 +1108,18 @@ class WorkAssignment(models.Model):
         verbose_name = 'Рабочее задание'
         verbose_name_plural = 'Рабочие задания'
 
+    def save(self, *args, **kwargs):
+        if self.technical_assignment and not self.name:
+            self.name = self.technical_assignment.name
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return self.name
 
 
 class TechnicalAssignment(models.Model):
-    name = models.CharField(max_length=100, unique=True, default='Name', verbose_name="наименование")
+    name = models.CharField(max_length=100, unique=True, null=True, blank=True, verbose_name="наименование")
+    post = models.ForeignKey('Post', on_delete=models.CASCADE, null=True, blank=True, related_name='technical_assignments', verbose_name="Связанная разработка")
     author = models.ForeignKey(User, related_name='created_assignments', null = True, on_delete=models.CASCADE, verbose_name="автор")
     date_of_creation = models.DateTimeField(default=timezone.now, verbose_name="Дата и время создания")
     last_editor = models.ForeignKey(User, related_name='edited_assignments', null = True, on_delete=models.CASCADE,
@@ -1065,15 +1127,14 @@ class TechnicalAssignment(models.Model):
     date_of_change = models.DateTimeField(auto_now=True, verbose_name="Дата и время последнего изменения")
     current_responsible = models.ForeignKey(User, related_name='responsible_assignments', null = True, on_delete=models.CASCADE,
                                             verbose_name="такущий ответственный")
-    version = models.CharField(max_length=3, blank=True, null=True, verbose_name="версия")
-    version_diff = models.TextField(max_length=1000, blank=True, null=True, verbose_name="разница версий")
-    task_for_design_work = models.OneToOneField(TaskForDesignWork, on_delete=models.SET_NULL, null=True, blank=True,
-                                                verbose_name="Техническое задание на ОКР")
-    revision_task = models.OneToOneField(RevisionTask, on_delete=models.SET_NULL, null=True, blank=True,
-                                         verbose_name="Техническое задание на доработку")
-    work_assignment = models.OneToOneField(WorkAssignment, on_delete=models.SET_NULL, null=True, blank=True,
-                                           verbose_name="Рабочие задания")
-    route = models.CharField(max_length=255, blank=True, null=True, verbose_name="Маршрут")
+    version = models.CharField(max_length=3, blank=True, default='1', null=True, verbose_name="версия")
+    version_diff = models.TextField(max_length=1000, blank=True, default='Стартовая версия', null=True, verbose_name="разница версий")
+    #task_for_design_work = models.OneToOneField(TaskForDesignWork, on_delete=models.SET_NULL, null=True, blank=True,
+                                                #verbose_name="Техническое задание на ОКР")
+    #revision_task = models.OneToOneField(RevisionTask, on_delete=models.SET_NULL, null=True, blank=True,
+                                         #verbose_name="Техническое задание на доработку")
+    #work_assignment = models.OneToOneField(WorkAssignment, on_delete=models.SET_NULL, null=True, blank=True,
+                                           #verbose_name="Рабочие задания")
 
     class AccessLevel(models.TextChoices):
         READ = '4', 'Чтение'
@@ -1094,6 +1155,11 @@ class TechnicalAssignment(models.Model):
     class Meta:
         verbose_name = 'Техническое задание'
         verbose_name_plural = 'Технические задания'
+
+    def save(self, *args, **kwargs):
+        if self.post and not self.name:
+            self.name = self.post.name
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name
