@@ -17,6 +17,7 @@ from .models import AddReportTechnicalProposal
 from .models import ProtocolTechnicalProposal
 from crm.models import Notifications, Customer, Decision_maker, Deal, Product, Deal_stage, Call, Letter, Company_branch, Meeting
 from .models import TechnicalAssignment, TaskForDesignWork, RevisionTask, WorkAssignment
+from .forms import WorkAssignmentForm
 
 
 
@@ -35,12 +36,16 @@ class ListTechnicalProposalInline(admin.TabularInline):
             return False
         return True
 
+class TechnicalAssignmentInline(admin.TabularInline):  # или StackedInline
+    model = TechnicalAssignment
+    extra = 1
+
 
 @admin.register(Post)
 class PostAdmin(admin.ModelAdmin):
-    list_display = ('name', 'desig_document', 'author', 'date_of_creation', 'date_of_change')
+    list_display = ('name', 'desig_document_post', 'author', 'date_of_creation', 'date_of_change')
     readonly_fields = ('date_of_change',)
-    inlines = [ListTechnicalProposalInline]
+    inlines = [ListTechnicalProposalInline, TechnicalAssignmentInline]
 
     def save_formset(self, request, form, formset, change):
         instances = formset.save(commit=False)
@@ -51,9 +56,6 @@ class PostAdmin(admin.ModelAdmin):
             if not instance.name or not instance.name.strip():
                 instance.name = instance.post.name
 
-            # Если desig_document пустой или только пробелы — взять из головной модели
-            if not instance.desig_document or not instance.desig_document.strip():
-                instance.desig_document = instance.post.desig_document
 
             instance.save()
         formset.save_m2m()
@@ -61,8 +63,8 @@ class PostAdmin(admin.ModelAdmin):
 
 @admin.register(ListTechnicalProposal)
 class ListTechnicalProposalAdmin(admin.ModelAdmin):
-    list_display = ['name', 'category', 'desig_document', 'status', 'date_of_creation']
-    search_fields = ['name', 'desig_document']
+    list_display = ['name', 'category', 'desig_document_list_technical_proposal', 'status', 'date_of_creation']
+    search_fields = ['name', 'desig_document_list_technical_proposal']
     readonly_fields = ('date_of_change',)
 
 
@@ -74,18 +76,18 @@ class ListTechnicalProposalAdmin(admin.ModelAdmin):
 @admin.register(GeneralDrawingProduct)
 class GeneralDrawingProductAdmin(admin.ModelAdmin):
     list_display = (
-        'name','desig_document','category','author','date_of_creation','status','version',
+        'name','category','author','date_of_creation','status','version',
     )
-    search_fields = ('name', 'desig_document')
+    search_fields = ('name',)
     list_filter = ('category', 'status', 'trl', 'litera')
     readonly_fields = ('date_of_change',)
 
 @admin.register(ElectronicModelProduct)
 class ElectronicModelProductAdmin(admin.ModelAdmin):
     list_display = (
-        'name','desig_document','author','date_of_creation','status','version','trl',
+        'name','desig_document_electronic_model_product','author','date_of_creation','status','version','trl',
     )
-    search_fields = ('name', 'desig_document')
+    search_fields = ('name', 'desig_document_electronic_model_product')
     list_filter = ('status', 'trl', 'category', 'develop_org')
     readonly_fields = ('date_of_change',)
 
@@ -100,19 +102,19 @@ class GeneralElectricalDiagramAdmin(admin.ModelAdmin):
 
 @admin.register(SoftwareProduct)
 class SoftwareProductAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'category', 'desig_document', 'status', 'version', 'date_of_creation')
-    search_fields = ('name', 'desig_document', 'status')
-    list_filter = ('status', 'category', 'trl', 'version')
+    list_display = ('id', 'name', 'category', 'desig_document_software_product', 'status', 'version', 'date_of_creation')
+    search_fields = ('name', 'desig_document_software_product', 'status')
+    list_filter = ('status', 'category', 'version')
     readonly_fields = ('date_of_change',)
 
 @admin.register(GeneralDrawingUnit)
 class GeneralDrawingUnitAdmin(admin.ModelAdmin):
-    list_display = ('name', 'desig_document', 'status', 'version')
+    list_display = ('name', 'desig_document_general_drawing_unit', 'status', 'version')
     readonly_fields = ('date_of_change',)
 
 @admin.register(ElectronicModelUnit)
 class ElectronicModelUnitAdmin(admin.ModelAdmin):
-    list_display = ('name', 'desig_document', 'status', 'version')
+    list_display = ('name', 'desig_document_electronic_model_unit', 'status', 'version')
     readonly_fields = ('date_of_change',)
 
 @admin.register(DrawingPartUnit)
@@ -120,7 +122,6 @@ class DrawingPartUnitAdmin(admin.ModelAdmin):
     list_display = (
         'id',
         'name',
-        'desig_document',
         'category',
         'status',
         'version',
@@ -129,14 +130,14 @@ class DrawingPartUnitAdmin(admin.ModelAdmin):
         'develop_org',
     )
     list_filter = ('status', 'category', 'trl', 'develop_org')
-    search_fields = ('name', 'desig_document', 'author__username', 'last_editor__username')
+    search_fields = ('name', 'author__username', 'last_editor__username')
     ordering = ('-date_of_creation',)
     readonly_fields = ('date_of_change',)
 
     fieldsets = (
         (None, {
             'fields': (
-                'name', 'category', 'desig_document',
+                'name', 'category',
                 'info_format', 'primary_use', 'change_number'
             )
         }),
@@ -163,7 +164,7 @@ class ElectronicModelPartUnitAdmin(admin.ModelAdmin):
     list_display = (
         'id',
         'name',
-        'desig_document',
+        'desig_document_electronic_model_part_unit',
         'category',
         'status',
         'version',
@@ -171,14 +172,14 @@ class ElectronicModelPartUnitAdmin(admin.ModelAdmin):
         'date_of_creation',
         'last_editor',
     )
-    search_fields = ('name', 'desig_document', 'category')
+    search_fields = ('name', 'desig_document_electronic_model_part_unit', 'category')
     list_filter = ('status', 'trl', 'category', 'develop_org')
-    readonly_fields = ('date_of_change',)
+    readonly_fields = ('date_of_change', 'info_format')
 
     fieldsets = (
         (None, {
             'fields': (
-                'category', 'name', 'desig_document', 'info_format',
+                'category', 'name', 'desig_document_electronic_model_part_unit', 'info_format',
                 'primary_use', 'change_number',
                 'pattern', 'version', 'version_diff',
                 'litera', 'trl', 'validity_date',
@@ -200,7 +201,7 @@ class ElectronicModelPartUnitAdmin(admin.ModelAdmin):
 class DrawingPartProductAdmin(admin.ModelAdmin):
     list_display = (
         'id',
-        'desig_document',
+        'desig_document_drawing_part_product',
         'name',
         'category',
         'status',
@@ -212,7 +213,7 @@ class DrawingPartProductAdmin(admin.ModelAdmin):
         'date_of_change',
     )
     list_filter = ('category', 'status', 'trl', 'date_of_creation')
-    search_fields = ('name', 'desig_document', 'author__username', 'current_responsible__username')
+    search_fields = ('name', 'desig_document_drawing_part_product', 'author__username', 'current_responsible__username')
     readonly_fields = ('date_of_change',)
 
     def save_model(self, request, obj, form, change):
@@ -224,12 +225,12 @@ class DrawingPartProductAdmin(admin.ModelAdmin):
 @admin.register(ElectronicModelPartProduct)
 class ElectronicModelPartProductAdmin(admin.ModelAdmin):
     list_display = (
-        'id', 'desig_document', 'name', 'category',
+        'id', 'desig_document_electronic_model_part_product', 'name', 'category',
         'status', 'version', 'trl', 'author',
         'current_responsible', 'date_of_creation', 'date_of_change'
     )
     list_filter = ('category', 'status', 'trl', 'date_of_creation')
-    search_fields = ('desig_document', 'name', 'author__username', 'current_responsible__username')
+    search_fields = ('desig_document_electronic_model_part_product', 'name', 'author__username', 'current_responsible__username')
     readonly_fields = ('date_of_change',)
 
     def save_model(self, request, obj, form, change):
@@ -245,7 +246,7 @@ class ReportTechnicalProposalAdmin(admin.ModelAdmin):
         'author', 'current_responsible', 'date_of_creation'
     )
     list_filter = ('category', 'status', 'date_of_creation')
-    search_fields = ('name', 'desig_document', 'author__username')
+    search_fields = ('name', 'desig_document_report_technical_proposal', 'author__username')
     readonly_fields = ('date_of_change',)
 
 @admin.register(AddReportTechnicalProposal)
@@ -292,13 +293,13 @@ class AddReportTechnicalProposalAdmin(admin.ModelAdmin):
 @admin.register(ProtocolTechnicalProposal)
 class ProtocolTechnicalProposalAdmin(admin.ModelAdmin):
     list_display = (
-        'id', 'name', 'desig_document', 'category',
+        'id', 'name', 'desig_document_protocol_technical_proporsal', 'category',
         'status', 'version', 'trl',
         'author', 'current_responsible',
         'date_of_creation', 'date_of_change'
     )
     list_filter = ('status', 'category', 'trl', 'date_of_creation')
-    search_fields = ('name', 'desig_document', 'author__username', 'current_responsible__username')
+    search_fields = ('name', 'desig_document_protocol_technical_proporsal', 'author__username', 'current_responsible__username')
     readonly_fields = ('date_of_change',)
 
     def save_model(self, request, obj, form, change):
@@ -410,6 +411,17 @@ admin.site.register(Deal_stage, Deal_stageAdmin)
 admin.site.register(Notifications)
 
 
+class TaskForDesignWorkInline(admin.TabularInline):  # или StackedInline
+    model = TaskForDesignWork
+    extra = 1
+
+class RevisionTaskInline(admin.TabularInline):  # или StackedInline
+    model = RevisionTask
+    extra = 1
+
+class WorkAssignmentInline(admin.TabularInline):  # или StackedInline
+    model = WorkAssignment
+    extra = 1
 
 @admin.register(TaskForDesignWork)
 class TaskForDesignWorkAdmin(admin.ModelAdmin):
@@ -433,9 +445,12 @@ class WorkAssignmentAdmin(admin.ModelAdmin):
     search_fields = ('name', 'author__username', 'current_responsible__username')
     list_filter = ('result',)
     readonly_fields = ('date_of_creation', 'date_of_change')
+    form = WorkAssignmentForm
 
 @admin.register(TechnicalAssignment)
 class TechnicalAssignmentAdmin(admin.ModelAdmin):
     list_display = ('name', 'author', 'date_of_creation', 'last_editor', 'date_of_change', 'current_responsible', 'version')
     search_fields = ('name', 'author__username', 'current_responsible__username')
     list_filter = ('access', 'security')
+    inlines = [WorkAssignmentInline, RevisionTaskInline, TaskForDesignWorkInline]
+
