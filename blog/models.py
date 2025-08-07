@@ -82,7 +82,7 @@ class Post(models.Model):
     ]
 
     name = models.CharField(max_length=100, unique=True, verbose_name="Наименование")
-    desig_document = models.CharField(max_length=50, null = True, verbose_name="Обозначение изделия")
+    desig_document_post = models.CharField(max_length=50, null = True, verbose_name="Обозначение изделия")
     author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_posts',
                                verbose_name="Автор")
     last_editor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='edited_posts',
@@ -160,7 +160,7 @@ class GeneralDrawingProduct(models.Model):
     ]
     category = models.CharField(max_length=50, default='ВО', verbose_name="Категория")
     name = models.CharField(max_length=100, default='ПАК СПМ 2.13 Чертеж общего вида изделия', verbose_name="Наименование")
-    desig_document = models.CharField(max_length=50, unique=True, verbose_name="Обозначение документа")
+    desig_document_general_drawing_product = models.CharField(max_length=50, unique=True, verbose_name="Обозначение документа", null=True)
     info_format = models.CharField(max_length=20, choices=INFO_FORMAT_CHOICES, verbose_name="Формат представления информации")
     primary_use = models.CharField(max_length=100, default='СИ.40522001.000.13ВПТ', verbose_name="Первичное применение")
     author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='gd_created_by', verbose_name="Автор")
@@ -227,7 +227,7 @@ class ElectronicModelProduct(models.Model):
 
     category = models.CharField(max_length=50, default='ЭМИ', verbose_name="Категория")
     name = models.CharField(max_length=100, default='ПАК СПМ 2.13 Электронная модель изделия', verbose_name="Наименование")
-    desig_document = models.CharField(max_length=50, unique=True, default='СИ.40522001.000.13ЭМИ', verbose_name="Обозначение документа")
+    desig_document_electronic_model_product = models.CharField(max_length=50, unique=True, verbose_name="Обозначение документа", default='1')
     info_format = models.CharField(max_length=20, default='ДЭ', verbose_name="Формат представления информации")
     primary_use = models.CharField(max_length=100, default='СИ.40522001.000.13ВПТ', verbose_name="Первичное применение")
     change_number = models.CharField(max_length=20, default='Без изм.', verbose_name="Номер изменения")
@@ -286,7 +286,7 @@ class GeneralElectricalDiagram(models.Model):
 
     category = models.CharField(max_length=50, default='Э6', verbose_name="Категория")
     name = models.CharField(max_length=100, default='ПАК СПМ 2.13 Схема электрическая общая', verbose_name="Наименование")
-    desig_document = models.CharField(max_length=50, unique=True, default='СИ.40522001.000.13Э6', verbose_name="Обозначение документа")
+    desig_document = models.CharField(max_length=50, unique=True, verbose_name="Обозначение документа", default='1')
     info_format = models.CharField(max_length=20, choices=INFO_FORMAT_CHOICES, default='ДЭ', verbose_name="Формат представления информации")
     primary_use = models.CharField(max_length=100, default='СИ.40522001.000.13ВПТ', verbose_name="Первичное применение")
     change_number = models.CharField(max_length=20, default='Без изм.', verbose_name="Номер изменения")
@@ -337,7 +337,7 @@ class SoftwareProduct(models.Model):
     ]
     category = models.CharField(max_length=50, default='ПО ПТ', verbose_name="Категория")
     name = models.CharField(max_length=100, default='ПАК СПМ 2.13  Программное обеспечение. Техническое предложение', verbose_name="Наименование")
-    desig_document = models.CharField(max_length=50, default='СИ.40522001.000.13ПО ПТ', verbose_name="Обозначение документа")
+    desig_document_software_product = models.CharField(max_length=50, verbose_name="Обозначение документа", default='1')
     info_format = models.CharField(max_length=30, default='ДЭ', verbose_name="Формат представления информации")
     author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Автор")
     date_of_creation = models.DateTimeField(default=timezone.now, verbose_name="Дата и время создания")
@@ -433,7 +433,7 @@ class ProtocolTechnicalProposal(models.Model):
         verbose_name="Категория"
     )
     name = models.CharField(max_length=100, verbose_name="Наименование")
-    desig_document = models.CharField(max_length=50, blank=True, null=True, unique=True, verbose_name="Обозначение изделия")
+    desig_document_protocol_technical_proporsal = models.CharField(max_length=50, blank=True, null=True, unique=True, verbose_name="Обозначение изделия")
     info_format = models.CharField(max_length=20, default="ДЭ", blank=True, verbose_name="Формат представления информации")
     primary_use = models.CharField(max_length=100, default='СИ.40522001.000.13ВПТ', verbose_name="Первичное применение")
     change_number = models.CharField(max_length=20, default='Изм. 1', verbose_name="Номер изменения")
@@ -500,7 +500,7 @@ class GeneralDrawingUnit(models.Model):
 
     category = models.CharField(max_length=50, default='ВО СЕ', verbose_name="Категория")
     name = models.CharField(max_length=100, verbose_name="Наименование")
-    desig_document = models.CharField(max_length=50, unique=True, null=True, verbose_name="Обозначение изделия")
+    desig_document_general_drawing_unit = models.CharField(max_length=50, unique=True, null=True, verbose_name="Обозначение изделия")
     info_format = models.CharField(max_length=20, choices=INFO_FORMAT_CHOICES, default='ДЭ', verbose_name="Формат представления информации")
     primary_use = models.CharField(max_length=100, default='СИ.40522001.000.13ВПТ', verbose_name="Первичное применение")
     change_number = models.CharField(max_length=20, default='Изм. 1', verbose_name="Номер изменения")
@@ -567,7 +567,7 @@ class ElectronicModelUnit(models.Model):
 
     category = models.CharField(max_length=50, default='ЭМ СЕ', verbose_name="Категория")
     name = models.CharField(max_length=100, default='Узел 1 Электронная модель сборочной единицы', verbose_name="Наименование")
-    desig_document = models.CharField(max_length=50, unique=True, default=1, verbose_name="Обозначение изделия")
+    desig_document_electronic_model_unit = models.CharField(max_length=50, unique=True, verbose_name="Обозначение изделия", default='1')
     info_format = models.CharField(max_length=20, choices=INFO_FORMAT_CHOICES, default='ДЭ', verbose_name="Формат представления информации")
     primary_use = models.CharField(max_length=100, default='СИ.40522001.000.13ВПТ', verbose_name="Первичное применение")
     change_number = models.CharField(max_length=20, default='Изм. 1', verbose_name="Номер изменения")
@@ -631,7 +631,7 @@ class DrawingPartUnit(models.Model):
 
     category = models.CharField(max_length=20, default='ЧД СЕ', verbose_name="Категория")
     name = models.CharField(max_length=100, verbose_name="Наименование")
-    desig_document = models.CharField(max_length=50, unique=True, default='1', verbose_name="Обозначение изделия")
+    desig_document_drawing_part_unit = models.CharField(max_length=50, unique=True, verbose_name="Обозначение изделия", default='1')
     info_format = models.CharField(max_length=10, choices=INFO_FORMAT_CHOICES, default='ДЭ', verbose_name="Формат представления информации")
     primary_use = models.CharField(max_length=100, default='СИ.40522001.000.13ВПТ', verbose_name="Первичное применение")
     change_number = models.CharField(max_length=20, default='Без изм.', verbose_name="Номер изменения")
@@ -665,7 +665,7 @@ class DrawingPartUnit(models.Model):
 class ElectronicModelPartUnit(models.Model):
     category = models.CharField(default='ЭМД СЕ', max_length=100, verbose_name="Категория")
     name = models.CharField(max_length=100, verbose_name="Наименование")
-    desig_document = models.CharField(max_length=50, unique=True, default='1', verbose_name="Обозначение изделия")
+    desig_document_electronic_model_part_unit = models.CharField(max_length=50, unique=True, verbose_name="Обозначение изделия", default='1')
     info_format = models.CharField(max_length=50, default='ДЭ', verbose_name="Формат представления информации")
     primary_use = models.CharField(max_length=100, default='СИ.40522001.000.13ВПТ', verbose_name="Первичное применение")
     change_number = models.CharField(max_length=20, default='Изм. 1', verbose_name="Номер изменения")
@@ -693,7 +693,7 @@ class ElectronicModelPartUnit(models.Model):
         verbose_name_plural = 'Электронные модели деталей СЕ'
 
     def __str__(self):
-        return f"{self.desig_document} — {self.name}"
+        return f"{self.desig_document_electronic_model_part_unit} — {self.name}"
 
 
 class DrawingPartProduct(models.Model):
@@ -738,7 +738,7 @@ class DrawingPartProduct(models.Model):
 
     category = models.CharField(max_length=50, default="ЧД ВО", verbose_name="Категория")
     name = models.CharField(max_length=100, verbose_name="Наименование")
-    desig_document = models.CharField(max_length=50, unique=True, default='1', verbose_name="Обозначение изделия")
+    desig_document_drawing_part_product = models.CharField(max_length=50, unique=True, verbose_name="Обозначение изделия", default='1')
     info_format = models.CharField(max_length=10, choices=INFO_FORMAT_CHOICES, default="ДЭ", verbose_name="Формат представления информации")
     primary_use = models.CharField(max_length=100, default='СИ.40522001.000.13ВПТ', verbose_name="Первичное применение")
     change_number = models.CharField(max_length=20, default='Без изм.', verbose_name="Номер изменения")
@@ -766,13 +766,13 @@ class DrawingPartProduct(models.Model):
         verbose_name_plural = 'Чертежи детали изделия'
 
     def __str__(self):
-        return f"{self.desig_document} — {self.name}"
+        return f"{self.desig_document_drawing_part_product} — {self.name}"
 
 
 class ElectronicModelPartProduct(models.Model):
     category = models.CharField(max_length=50, default="ЭМД ВО", verbose_name="Категория")
     name = models.CharField(max_length=100, verbose_name="Наименование")
-    desig_document = models.CharField(max_length=50, unique=True, default='1', verbose_name="Обозначение изделия")
+    desig_document_electronic_model_part_product = models.CharField(max_length=50, unique=True, verbose_name="Обозначение изделия", default='1')
     info_format = models.CharField(max_length=20, default="ДЭ", blank=True, verbose_name="Формат представления информации")
     primary_use = models.CharField(max_length=100, default='СИ.40522001.000.13ВПТ', verbose_name="Первичное применение")
     change_number = models.CharField(max_length=20, default='Изм. 1', verbose_name="Номер изменения")
@@ -800,7 +800,7 @@ class ElectronicModelPartProduct(models.Model):
         verbose_name_plural = 'Электронные модели детали изделия'
 
     def __str__(self):
-        return f"{self.desig_document} — {self.name}"
+        return f"{self.desig_document_electronic_model_part_product} — {self.name}"
 
 
 class AddReportTechnicalProposal(models.Model):
@@ -864,7 +864,7 @@ class AddReportTechnicalProposal(models.Model):
         verbose_name_plural = 'Приложения к пояснительным запискам Технического предложения'
 
     def __str__(self):
-        return self.name or f"ПЗ ПТ. Приложение {self.desig_document or self.id}"
+        return self.name or f"ПЗ ПТ. Приложение {self.id}"
 
 
 class ListTechnicalProposal(models.Model):
@@ -894,7 +894,7 @@ class ListTechnicalProposal(models.Model):
     category = models.CharField(max_length=50, default='ВПТ', verbose_name="Категория")
     name = models.CharField(max_length=150, blank=True, verbose_name="Наименование")
     post = models.ForeignKey('Post', on_delete=models.CASCADE, null=True, blank=True, related_name='list_technical_proposals')
-    desig_document = models.CharField(max_length=50, unique=True, default='1', verbose_name="Обозначение изделия")
+    desig_document_list_technical_proposal = models.CharField(max_length=50, unique=True, verbose_name="Обозначение изделия", default='1')
     info_format = models.CharField(max_length=20, choices=INFO_FORMAT_CHOICES, default='ДЭ', verbose_name="Формат представления информации")
     change_number = models.CharField(max_length=20, default='без изм', verbose_name="Номер изменения")
     author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Автор")
