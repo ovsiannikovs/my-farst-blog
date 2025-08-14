@@ -1,0 +1,27 @@
+
+.change-list #changelist-form .results,
+#changelist .results,
+#content .results {
+  overflow-x: auto !important;
+  display: block !important;
+}
+
+.change-list #changelist-form .results table,
+#changelist .results table,
+#content .results table {
+  width: max-content !important;
+  min-width: 1600px;
+  border-collapse: collapse;
+}
+
+.change-list .results th,
+.change-list .results td,
+#changelist .results th,
+#changelist .results td {
+  white-space: nowrap !important;
+}
+
+.change-list a.button {
+  padding: 6px 10px !important;
+  line-height: 1.2 !important;
+}
