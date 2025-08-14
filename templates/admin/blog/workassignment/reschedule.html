@@ -1,0 +1,17 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+  <h1>Перенести срок: {{ original }}</h1>
+  <div class="module aligned">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      <table>
+        {{ form.as_table }}
+      </table>
+      <div class="submit-row">
+        <input type="submit" class="default" value="Сохранить перенос">
+        <a href="../change/" class="button cancel-link">Отмена</a>
+      </div>
+    </form>
+  </div>
+{% endblock %}
+
