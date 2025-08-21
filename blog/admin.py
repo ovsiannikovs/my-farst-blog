@@ -72,7 +72,6 @@ class PostAdmin(admin.ModelAdmin):
     technical_assignments_count.short_description = 'ТЗ (шт.)'
 
     def open_tech_assignments_link(self, obj):
-        # проверь app_label: ниже используется 'blog'
         url = reverse('admin:blog_technicalassignment_changelist') + f'?post__id__exact={obj.pk}'
         return format_html('<a class="button" href="{}">📂 Открыть ТЗ</a>', url)
     open_tech_assignments_link.short_description = 'Тех. задания'
@@ -714,7 +713,6 @@ class TechnicalAssignmentAdmin(admin.ModelAdmin):
 
     # кнопки «Открыть ПЗ» и «Новое ПЗ»
     def design_work_buttons(self, obj):
-        # ВАЖНО: если app_label НЕ blog, замени 'blog' на свой
         list_url = reverse('admin:blog_taskfordesignwork_changelist') + f'?technical_assignment__id__exact={obj.pk}'
         add_url  = reverse('admin:blog_taskfordesignwork_add') + f'?technical_assignment={obj.pk}'
         return format_html(
@@ -728,7 +726,6 @@ class TechnicalAssignmentAdmin(admin.ModelAdmin):
         css = {'all': ('blog/admin_hscroll.css',)}
 
 
-# перерегистрируем TechnicalAssignment с новой админкой
 try:
     admin.site.unregister(TechnicalAssignment)
 except admin.sites.NotRegistered:
