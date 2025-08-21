@@ -23,7 +23,7 @@ from .forms import WorkAssignmentForm
 from .models import WorkAssignmentDeadlineChange
 from .admin_forms import RescheduleAdminForm
 from .services import WorkAssignmentService
-
+from .models import (Process, Route, RouteProcess, CheckDocumentWorkflow, ApprovalDocumentWorkflow)
 
 
 @admin.register(TechnicalProposal)
@@ -750,3 +750,56 @@ class WorkAssignmentDeadlineChangeAdmin(admin.ModelAdmin):
     list_filter = ("changed_by","changed_at")
     search_fields = ("assignment__name","reason")
 
+@admin.register(Process)
+class ProcessAdmin(admin.ModelAdmin):
+    list_display = ("name", "code")
+    search_fields = ("name", "code")
+
+
+class RouteProcessInline(admin.TabularInline):
+    model = RouteProcess
+    extra = 0
+    autocomplete_fields = ("process",)
+    ordering = ("order",)
+
+
+@admin.register(CheckDocumentWorkflow)
+class CheckDocumentWorkflowAdmin(admin.ModelAdmin):
+    list_display = ("desig_or_name_document", "process_sequence", "author", "current_responsible", "date_of_change")
+    list_filter = (
+        "process_sequence",
+        "check_technical_requirements",
+        "check_it_requirements",
+        "check_3D_model",
+        "norm_control",
+    )
+    search_fields = (
+        "desig_or_name_document",
+        "types_check_document",
+        "author__username",
+        "last_editor__username",
+        "current_responsible__username",
+    )
+    autocomplete_fields = ("author", "last_editor", "current_responsible")
+
+
+@admin.register(ApprovalDocumentWorkflow)
+class ApprovalDocumentWorkflowAdmin(admin.ModelAdmin):
+    list_display = ("name", "author", "last_editor", "date_of_change")
+    search_fields = ("name", "author__username", "last_editor__username")
+    autocomplete_fields = ("author", "last_editor")
+
+
+@admin.register(Route)
+class RouteAdmin(admin.ModelAdmin):
+    list_display = ("name", "version", "author", "current_responsible", "date_of_change")
+    list_filter = ("access_level",)
+    search_fields = ("name",)
+    inlines = [RouteProcessInline]
+    autocomplete_fields = (
+        "author",
+        "last_editor",
+        "current_responsible",
+        "check_document",
+        "approval_document",
+    )

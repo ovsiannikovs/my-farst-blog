@@ -2,6 +2,9 @@ from django.db import models
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
+from django.conf import settings
+
+User = settings.AUTH_USER_MODEL
 User = get_user_model()
 
 
@@ -1136,9 +1139,9 @@ class WorkAssignment(models.Model):
 
     result = models.CharField(max_length=100, choices=RESULT_CHOICES, blank=True, null=True, verbose_name="Результат")
     result_description = models.TextField(max_length=5000, blank=True, null=True, verbose_name="Описание результата")
-    route = models.CharField(max_length=255, blank=True, null=True, verbose_name="Маршрут")
+    route = models.ForeignKey("Route", on_delete=models.CASCADE, related_name='routes', blank=True, null=True, verbose_name="Маршрут")
 
-    target_deadline = models.DateField("Целевой срок выполнения", null=False, blank=False)
+    target_deadline = models.DateField("Целевой срок выполнения", default=timezone.now, null=False, blank=False)
     hard_deadline = models.DateField("Абсолютный дедлайн", null=True, blank=True)
     time_window_start = models.DateField("Временное окно: с", null=True, blank=True)
     time_window_end = models.DateField("Временное окно: по", null=True, blank=True)
@@ -1147,6 +1150,8 @@ class WorkAssignment(models.Model):
     control_status = models.CharField(
         "Контроль срока — статус",
         max_length=20,
+        null=True,
+        blank=True,
         choices=TEMP_STATUS_CHOICES,
     )
     control_date = models.DateField("Контроль срока — дата", null=True, blank=True)
@@ -1305,3 +1310,203 @@ class TechnicalAssignment(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class Process(models.Model):
+    class Kind(models.TextChoices):
+        IT_REQ   = "it_requirements",   "Проверка IT требований"
+        TECH_REQ = "tech_requirements", "Проверка технических требований"
+        NORM     = "norm_control",      "Нормоконтроль"
+
+    kind = models.CharField(
+        max_length=32,
+        choices=Kind.choices,
+        unique=True,
+        default=Kind.IT_REQ,
+    )
+    code = models.SlugField(max_length=64, unique=True, editable=False)
+    name = models.CharField(max_length=255, unique=True, editable=False)
+
+    def save(self, *args, **kwargs):
+        # синхронизируем служебные поля с выбором kind
+        self.code = self.kind
+        self.name = self.get_kind_display()
+        super().save(*args, **kwargs)
+
+    class Meta:
+        verbose_name = "Процесс"
+        verbose_name_plural = "Процессы"
+
+    def __str__(self):
+        return self.name
+
+
+class CheckDocumentWorkflow(models.Model):
+    """
+    Алгоритм проверки для конкретного документа.
+    """
+
+    YES_NO_CHOICES = (
+        ("YES", "ДА"),
+        ("NO", "НЕТ"),
+    )
+
+    RESOLUTION_CHOICES = (
+        ("APPROVED", "СОГЛАСОВАНО"),
+        ("REJECTED", "НЕ СОГЛАСОВАНО"),
+    )
+
+    # 1–7 аудит/версионирование
+    author = models.ForeignKey(User, on_delete=models.PROTECT, related_name="created_check_workflows")
+    date_of_creation = models.DateTimeField(default=timezone.now, db_index=True)
+    last_editor = models.ForeignKey(User, on_delete=models.PROTECT, related_name="edited_check_workflows")
+    date_of_change = models.DateTimeField(default=timezone.now)
+    current_responsible = models.ForeignKey(User, on_delete=models.PROTECT, related_name="responsible_check_workflows")
+    version = models.PositiveSmallIntegerField(null=True, blank=True)
+
+    # 8 Тип/категория проверяемого документа
+    types_check_document = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Напр.: ЭД, ПД, 3D-модель и т.д."
+    )
+    # 9 Обозначение/наименование документа
+    desig_or_name_document = models.CharField(max_length=100)
+    # 10 Загружаемый файл
+    uploaded_file = models.FileField(upload_to="check_docs/", help_text="PDF с ЭЦП разработчика")
+
+    # --- Блок «Проверка технических требований» ---
+    check_technical_requirements = models.CharField(max_length=3, choices=YES_NO_CHOICES, blank=True)
+    check_technical_requirements_responsible = models.CharField(max_length=255, blank=True)
+    check_technical_requirements_resolution = models.CharField(max_length=10, choices=RESOLUTION_CHOICES, blank=True)
+    check_technical_requirements_comment = models.TextField(max_length=5000, blank=True)
+    check_technical_requirements_date_of_resolution = models.DateTimeField(null=True, blank=True)
+    check_technical_requirements_signature = models.BooleanField(default=False)
+    check_technical_requirements_date_of_signature = models.DateTimeField(null=True, blank=True)
+
+    # --- Блок «Проверка IT требований» ---
+    check_it_requirements = models.CharField(max_length=3, choices=YES_NO_CHOICES, blank=True)
+    check_it_requirements_responsible = models.CharField(max_length=255, blank=True)
+    check_it_requirements_resolution = models.CharField(max_length=10, choices=RESOLUTION_CHOICES, blank=True)
+    check_it_requirements_comment = models.TextField(max_length=5000, blank=True)
+    check_it_requirements_date_of_resolution = models.DateTimeField(null=True, blank=True)
+    check_it_requirements_signature = models.BooleanField(default=False)
+    check_it_requirements_date_of_signature = models.DateTimeField(null=True, blank=True)
+
+    # --- Блок «Проверка 3D-моделей» ---
+    check_3D_model = models.CharField(max_length=3, choices=YES_NO_CHOICES, blank=True)
+    check_3D_model_responsible = models.CharField(max_length=255, blank=True)
+    check_3D_model_resolution = models.CharField(max_length=10, choices=RESOLUTION_CHOICES, blank=True)
+    check_3D_model_comment = models.TextField(max_length=5000, blank=True)
+    check_3D_model_date_of_resolution = models.DateTimeField(null=True, blank=True)
+    check_3D_model_signature = models.BooleanField(default=False)
+    check_3D_model_date_of_signature = models.DateTimeField(null=True, blank=True)
+
+    # --- Блок «Нормоконтроль» ---
+    norm_control = models.CharField(max_length=3, choices=YES_NO_CHOICES, blank=True)
+    norm_control_responsible = models.CharField(max_length=255, blank=True)
+    norm_control_resolution = models.CharField(max_length=10, choices=RESOLUTION_CHOICES, blank=True)
+    norm_control_comment = models.TextField(max_length=5000, blank=True)
+    norm_control_date_of_resolution = models.DateTimeField(null=True, blank=True)
+    norm_control_signature = models.BooleanField(default=False)
+    norm_control_date_of_signature = models.DateTimeField(null=True, blank=True)
+
+    class ProcessSequence(models.IntegerChoices):
+        IT_TECH_NORM = 1, "Проверка IT требований → Тех. требования → Нормоконтроль"
+        _3D_TECH_NORM = 2, "Проверка 3D-моделей → Тех. требования → Нормоконтроль"
+        TECH_NORM = 3, "Тех. требования → Нормоконтроль"
+        _3D_NORM = 4, "Проверка 3D-моделей → Нормоконтроль"
+        NORM_ONLY = 5, "Нормоконтроль"
+
+    process_sequence = models.IntegerField(choices=ProcessSequence.choices)
+
+    class Meta:
+        verbose_name = "Проверка документа (workflow)"
+        verbose_name_plural = "Проверки документа (workflow)"
+        ordering = ("-date_of_creation",)
+
+    def __str__(self):
+        return f"Проверка: {self.desig_or_name_document} (v{self.version or '-'})"
+
+    def save(self, *args, **kwargs):
+        self.date_of_change = timezone.now()
+        super().save(*args, **kwargs)
+
+
+class ApprovalDocumentWorkflow(models.Model):
+    """Минимальная заглушка"""
+    name = models.CharField(max_length=255)
+    author = models.ForeignKey(User, on_delete=models.PROTECT, related_name="created_approval_workflows")
+    date_of_creation = models.DateTimeField(default=timezone.now)
+    last_editor = models.ForeignKey(User, on_delete=models.PROTECT, related_name="edited_approval_workflows")
+    date_of_change = models.DateTimeField(default=timezone.now)
+
+    def save(self, *args, **kwargs):
+        self.date_of_change = timezone.now()
+        super().save(*args, **kwargs)
+
+    class Meta:
+        verbose_name = "Утверждение документа (workflow)"
+        verbose_name_plural = "Утверждения документа (workflow)"
+
+    def __str__(self):
+        return self.name
+
+
+class Route(models.Model):
+    """Маршруты — набор алгоритмов / паттернов"""
+    name = models.CharField(max_length=255, unique=True)
+    author = models.ForeignKey(User, on_delete=models.PROTECT, related_name="created_routes")
+    date_of_creation = models.DateTimeField(default=timezone.now, db_index=True)
+    last_editor = models.ForeignKey(User, on_delete=models.PROTECT, related_name="edited_routes")
+    date_of_change = models.DateTimeField(default=timezone.now)
+    current_responsible = models.ForeignKey(User, on_delete=models.PROTECT, related_name="responsible_routes")
+    version = models.PositiveSmallIntegerField(null=True, blank=True)
+    version_diff = models.CharField(max_length=1000, blank=True)
+
+    check_document = models.ForeignKey('CheckDocumentWorkflow', on_delete=models.SET_NULL,
+                                       null=True, blank=True, related_name='routes')
+    approval_document = models.ForeignKey('ApprovalDocumentWorkflow', on_delete=models.SET_NULL,
+                                          null=True, blank=True, related_name='routes')
+    processes = models.ManyToManyField('Process', through='RouteProcess', blank=True)
+
+    class AccessLevel(models.TextChoices):
+        PUBLIC = "O", "общий (О)"
+        CONFIDENTIAL = "K", "конфиденциально (К)"
+        SECRET = "C", "секретно (С)"
+        TOP_SECRET = "CC", "совершенно секретно (СС)"
+
+    permissions_mask = models.PositiveSmallIntegerField(
+        default=7,
+        help_text="0..7 по таблице прав (визуализация). Значение по умолчанию: 7"
+    )
+    access_level = models.CharField(max_length=2, choices=AccessLevel.choices, default=AccessLevel.PUBLIC)
+
+    class Meta:
+        verbose_name = "Маршрут"
+        verbose_name_plural = "Маршруты"
+        ordering = ("name",)
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        self.date_of_change = timezone.now()
+        super().save(*args, **kwargs)
+
+
+class RouteProcess(models.Model):
+    """Сквозная таблица, чтобы упорядочить процессы в маршруте"""
+    route = models.ForeignKey('Route', on_delete=models.CASCADE)
+    process = models.ForeignKey('Process', on_delete=models.PROTECT)
+    order = models.PositiveSmallIntegerField(default=1)
+
+    class Meta:
+        unique_together = (('route', 'process'), ('route', 'order'))
+        ordering = ('route', 'order')
+
+    def __str__(self):
+        return f"{self.route} → {self.process} ({self.order})"
+
+
+
