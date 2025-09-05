@@ -1,6 +1,7 @@
 from django.contrib import admin, messages
 from django.urls import reverse, path
 from django.utils.html import format_html
+from django.template.loader import render_to_string
 from .models import Post
 from .models import TechnicalProposal
 from .models import ListTechnicalProposal
@@ -17,13 +18,17 @@ from .models import ElectronicModelPartProduct
 from .models import ReportTechnicalProposal
 from .models import AddReportTechnicalProposal
 from .models import ProtocolTechnicalProposal
-from crm.models import Notifications, Customer, Decision_maker, Deal, Product, Deal_stage, Call, Letter, Company_branch, Meeting
+from crm.models import Notifications, Customer, Decision_maker, Deal, Product, Deal_stage, Call, Letter, Company_branch, Meeting, MeetingFile, TicketCategory, SupportTicket, TicketComment, KnowledgeBaseArticle
 from .models import TechnicalAssignment, TaskForDesignWork, RevisionTask, WorkAssignment
 from .forms import WorkAssignmentForm
 from .models import WorkAssignmentDeadlineChange
 from .admin_forms import RescheduleAdminForm
 from .services import WorkAssignmentService
 from .models import (Process, Route, RouteProcess, CheckDocumentWorkflow, ApprovalDocumentWorkflow)
+from django.http import JsonResponse
+from crm.forms import TicketCommentForm, KnowledgeBaseArticleForm, SupportTicketForm
+from django.db import models
+
 
 
 @admin.register(TechnicalProposal)
@@ -369,14 +374,13 @@ class CustomerAdmin(admin.ModelAdmin):
     list_display = ('name_of_company', 'revenue_for_last_year', 'length_of_electrical_network_km')
     list_filter = ('name_of_company', 'revenue_for_last_year')  # Фильтры в правой части
     list_filter = (RevenueRangeFilter,)
-    search_fields = ('name_of_company', 'address')  # Поиск по этим полям
+    search_fields = ('name_of_company__icontains', 'address__icontains')  # Поиск по этим полям
 
 
 class Decision_makerAdmin(admin.ModelAdmin):
     list_display = ('full_name', 'city_of_location', 'function', 'customer')
     list_filter = ('city_of_location', 'function', 'customer')
-    search_fields = ('full_name', 'phone_number', 'email')
-
+    search_fields = ('full_name__icontains', 'phone_number__icontains', 'email__icontains')
 
 class DealAdmin(admin.ModelAdmin):
     list_display = ('customer', 'start_date', 'status', 'deal_amount')
@@ -397,12 +401,24 @@ class Deal_stageAdmin(admin.ModelAdmin):
     search_fields = ('deal__customer__name_of_company', 'description_of_task_at_stage')
 
 
-@admin.register(Call)
+#@admin.register(Call)
 class CallAdmin(admin.ModelAdmin):
     list_display = ('customer', 'decision_maker', 'planned_date', 'responsible', 'deal')
-    search_fields = ('call_goal', 'call_result')
+    search_fields = (
+        'call_goal__icontains',
+        'call_result__icontains',
+        'customer__name_of_company__icontains',
+        'decision_maker__full_name__icontains',
+        'responsible__username__icontains',
+    )
     list_filter = ('planned_date',)
     date_hierarchy = 'planned_date'
+
+    actions = ['export_to_excel', 'mark_as_done']
+    formfield_overrides = {
+        models.TextField: {'widget': admin.widgets.AdminTextareaWidget(attrs={'rows': 4, 'cols': 80})},
+    }
+
 
 
 @admin.register(Letter)
@@ -421,12 +437,242 @@ class Company_branchAdmin(admin.ModelAdmin):
     search_fields = ('name_of_company', 'address')  # Поиск по этим полям
 
 
+class MeetingFileInline(admin.TabularInline):
+    model = MeetingFile
+    extra = 1
+    fields = ['file', 'description', 'uploaded_at']
+    readonly_fields = ['uploaded_at']
+    max_num = 10  # Ограничение на количество файлов
+
+
 @admin.register(Meeting)
 class MeetingAdmin(admin.ModelAdmin):
-    list_display = ('id', 'customer', 'decision_maker', 'responsible_user', 'planned_date')
-    list_filter = ('planned_date', 'customer', 'decision_maker', 'responsible_user')
-    search_fields = ('goal_description', 'result_description')
-    ordering = ('-planned_date',)
+    list_display = [
+        'id', 'customer', 'decision_maker', 'responsible_user',
+        'meeting_date', 'meeting_time', 'status'
+    ]
+    list_filter = ['meeting_date', 'customer', 'responsible_user', 'status']
+    search_fields = ['goal_description', 'result_description']
+    ordering = ['-meeting_date', '-meeting_time']
+    inlines = [MeetingFileInline]  # Добавляем inline для файлов
+
+    fieldsets = (
+        ('Основная информация', {
+            'fields': ('customer', 'decision_maker', 'responsible_user')
+        }),
+        ('Дата и время', {
+            'fields': ('meeting_date', 'meeting_time')
+        }),
+        ('Статус и описание', {
+            'fields': ('status', 'goal_description', 'result_description')
+        }),
+    )
+
+    def save_model(self, request, obj, form, change):
+        # Автоматически подставляем ЛПР заказчика, если не выбран
+        if obj.customer and not obj.decision_maker:
+            obj.decision_maker = obj.customer.лпр
+        super().save_model(request, obj, form, change)
+
+
+@admin.register(MeetingFile)
+class MeetingFileAdmin(admin.ModelAdmin):
+    list_display = ['meeting', 'file', 'description', 'uploaded_at']
+    list_filter = ['uploaded_at', 'meeting']
+    search_fields = ['meeting__customer__name_of_company', 'description']
+
+
+
+# Категории заявок
+@admin.register(TicketCategory)
+class TicketCategoryAdmin(admin.ModelAdmin):
+    list_display = ['get_name_display', 'description']
+    list_display_links = ['get_name_display']
+    search_fields = ['name', 'description']
+    list_per_page = 20
+
+    def get_name_display(self, obj):
+        return obj.get_name_display()
+
+    get_name_display.short_description = 'Название категории'
+
+    # Добавляем action для массового удаления
+    actions = ['delete_selected_categories']
+
+    def delete_selected_categories(self, request, queryset):
+        # Запрещаем удаление системных категорий
+        protected_categories = ['question', 'error', 'consultation', 'improvement']
+        deletable = queryset.exclude(name__in=protected_categories)
+
+        count = deletable.count()
+        deletable.delete()
+
+        self.message_user(
+            request,
+            f"Удалено {count} категорий. Системные категории нельзя удалять.",
+            messages.SUCCESS
+        )
+
+    delete_selected_categories.short_description = "Удалить выбранные категории (кроме системных)"
+
+
+# Inline для комментариев
+class TicketCommentInline(admin.TabularInline):
+    model = TicketComment
+    form = TicketCommentForm
+    extra = 1
+    fields = ['author', 'text', 'file', 'created_date']
+    readonly_fields = ['created_date']
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('author')
+
+
+# Заявки
+@admin.register(SupportTicket)
+class SupportTicketAdmin(admin.ModelAdmin):
+    form = SupportTicketForm
+    list_display = [
+        'id', 'created_date', 'customer', 'product', 'category',
+        'truncated_problem', 'status_badge', 'status_changed_date',
+        'created_by', 'assigned_to', 'custom_actions'
+    ]
+    list_filter = [
+        'status', 'category', 'created_date', 'customer',
+        'product', 'assigned_to'
+    ]
+    search_fields = [
+        'problem', 'description', 'customer__name_of_company',
+        'id', 'created_by__username'
+    ]
+    readonly_fields = ['created_date', 'status_changed_date', 'created_by']
+    inlines = [TicketCommentInline]
+    date_hierarchy = 'created_date'
+    list_per_page = 25
+
+    fieldsets = (
+        ('Основная информация', {
+            'fields': ('customer', 'product', 'category', 'problem', 'description')
+        }),
+        ('Статус и назначение', {
+            'fields': ('status', 'assigned_to', 'created_by', 'created_date', 'status_changed_date')
+        }),
+    )
+
+    def truncated_problem(self, obj):
+        return obj.problem[:50] + '...' if len(obj.problem) > 50 else obj.problem
+
+    truncated_problem.short_description = 'Проблема'
+
+    def status_badge(self, obj):
+        status_colors = {
+            'new': 'gray',
+            'in_progress': 'blue',
+            'waiting': 'orange',
+            'resolved': 'green'
+        }
+        color = status_colors.get(obj.status, 'gray')
+        return format_html(
+            '<span style="background-color: {}; color: white; padding: 2px 6px; border-radius: 3px;">{}</span>',
+            color, obj.get_status_display()
+        )
+
+    status_badge.short_description = 'Статус'
+
+    def custom_actions(self, obj):
+        view_url = reverse('admin:crm_supportticket_change', args=[obj.id])
+        return format_html(
+            '<a href="{}">👁️ Просмотр</a>',
+            view_url
+        )
+
+    custom_actions.short_description = 'Действия'
+
+    def save_model(self, request, obj, form, change):
+        if not obj.pk:
+            obj.created_by = request.user
+        super().save_model(request, obj, form, change)
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related(
+            'customer', 'product', 'category', 'created_by', 'assigned_to'
+        )
+
+
+# База знаний
+@admin.register(KnowledgeBaseArticle)
+class KnowledgeBaseArticleAdmin(admin.ModelAdmin):
+    form = KnowledgeBaseArticleForm
+    list_display = [
+        'title', 'category', 'created_date', 'updated_date',
+        'author', 'status_badge', 'custom_actions'
+    ]
+    list_filter = ['status', 'category', 'created_date', 'author']
+    search_fields = ['title', 'content', 'author__username']
+    readonly_fields = ['created_date', 'updated_date', 'author']
+    list_per_page = 25
+
+    fieldsets = (
+        ('Основная информация', {
+            'fields': ('title', 'category', 'status')
+        }),
+        ('Содержание', {
+            'fields': ('content', 'file')
+        }),
+        ('Системная информация', {
+            'fields': ('author', 'created_date', 'updated_date'),
+            'classes': ('collapse',)
+        }),
+    )
+
+    def status_badge(self, obj):
+        status_colors = {
+            'draft': 'gray',
+            'published': 'green',
+            'archived': 'red'
+        }
+        color = status_colors.get(obj.status, 'gray')
+        return format_html(
+            '<span style="background-color: {}; color: white; padding: 2px 6px; border-radius: 3px;">{}</span>',
+            color, obj.get_status_display()
+        )
+
+    status_badge.short_description = 'Статус'
+
+    def custom_actions(self, obj):
+        view_url = reverse('admin:crm_knowledgebasearticle_change', args=[obj.id])
+        return format_html(
+            '<a href="{}">👁️ Просмотр</a>',
+            view_url
+        )
+
+    custom_actions.short_description = 'Действия'
+
+    def save_model(self, request, obj, form, change):
+        if not obj.pk:
+            obj.author = request.user
+        super().save_model(request, obj, form, change)
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('category', 'author')
+
+
+# Комментарии (отдельная регистрация для полного управления)
+@admin.register(TicketComment)
+class TicketCommentAdmin(admin.ModelAdmin):
+    list_display = ['ticket', 'author', 'truncated_text', 'created_date']
+    list_filter = ['created_date', 'author']
+    search_fields = ['text', 'ticket__id', 'author__username']
+    readonly_fields = ['created_date']
+
+    def truncated_text(self, obj):
+        return obj.text[:100] + '...' if len(obj.text) > 100 else obj.text
+
+    truncated_text.short_description = 'Комментарий'
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('ticket', 'author')
+
 
 
 admin.site.register(Customer, CustomerAdmin)
@@ -435,6 +681,8 @@ admin.site.register(Deal, DealAdmin)
 admin.site.register(Product, ProductAdmin)
 admin.site.register(Deal_stage, Deal_stageAdmin)
 admin.site.register(Notifications)
+admin.site.register(Call, CallAdmin)
+#admin.site.register(Meeting, MeetingAdmin)
 
 
 class TaskForDesignWorkInline(admin.TabularInline):

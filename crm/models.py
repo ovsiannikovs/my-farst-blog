@@ -2,6 +2,14 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.conf import settings
 from django.utils import timezone
+from django.core.exceptions import ValidationError
+
+
+def validate_file_size(value):
+    """Ограничение файла 20 МБ"""
+    limit = 20 * 1024 * 1024
+    if value.size > limit:
+        raise ValidationError('Размер одного файла не должен превышать 20 МБ')
 
 
 class Notifications(models.Model):
@@ -26,6 +34,7 @@ class Notifications(models.Model):
 
 class Customer(models.Model):
     name_of_company = models.CharField(max_length=255, verbose_name='Название компании', default='Без названия')
+    iin = models.CharField(max_length=12, blank=True, null=True, verbose_name='ИИН')
     revenue_for_last_year = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True, verbose_name='Выручка за последний год', help_text='Миллиард рублей')
     length_of_electrical_network_km = models.DecimalField(max_digits=8, decimal_places=2, blank=True, null=True, verbose_name='Длина сетей, км')
     quantity_of_technical_transformer_pcs = models.PositiveIntegerField(blank=True, null=True, verbose_name='Количество ТП, шт')
@@ -45,8 +54,9 @@ class Decision_maker(models.Model):
         DIRECTOR = 0, 'директор'
         CHIEF_ENGINEER = 1, 'главный инженер'
         TECHNICAL_SPECIALIST = 2, 'технический специалист'
+        OWNER = 3, 'собственник'
 
-    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='лпр_листы', null=False,
+    customer = models.OneToOneField(Customer, on_delete=models.CASCADE, related_name='лпр', null=False,
     blank=False, verbose_name='Заказчик')
     full_name = models.CharField(max_length=255, verbose_name='ФИО')
     city_of_location = models.CharField(max_length=100, blank=True, null=True,verbose_name='Город местонахождения')
@@ -57,7 +67,7 @@ class Decision_maker(models.Model):
     description_and_impression = models.TextField(blank=True, null=True, verbose_name='Описание и впечатления')
 
     def __str__(self):
-        return f"{self.full_name} ({self.function})"
+        return f"{self.full_name} ({self.customer})"
 
     class Meta:
         verbose_name = 'ЛПР'
@@ -140,8 +150,8 @@ class Call(models.Model):
     decision_maker = models.ForeignKey(Decision_maker, on_delete=models.CASCADE, blank=True, null=True, verbose_name='ЛПР')
     responsible = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Ответственный')
     planned_date = models.DateField(blank=True, null=True, verbose_name='Плановая дата')
-    call_goal = models.CharField(max_length=200, blank=True, null=True, verbose_name='Описание цели звонка')
-    call_result = models.CharField(max_length=200, blank=True, null=True, verbose_name='Описание результата')
+    call_goal = models.CharField(max_length=1000, blank=True, null=True, verbose_name='Описание цели звонка')
+    call_result = models.TextField(max_length=2000, blank=True, null=True, verbose_name='Описание результата')
     deal = models.ForeignKey(Deal, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Сделка (если есть)')
 
     def __str__(self):
@@ -191,18 +201,190 @@ class Company_branch(models.Model):
 
 
 class Meeting(models.Model):
-    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, verbose_name='Заказчик', blank=True, null=True)
-    decision_maker = models.ForeignKey(Decision_maker, on_delete=models.CASCADE, verbose_name='ЛПР', blank=True, null=True)
-    responsible_user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Ответственный пользователь')
-    planned_date = models.DateField(verbose_name='Плановая дата', blank=True, null=True)
-    goal_description = models.TextField(max_length=3500, verbose_name='Описание цели встречи', blank=True, null=True)
-    result_description = models.TextField(max_length=3500, verbose_name='Описание результата встречи', blank=True, null=True)
-    deal = models.ForeignKey(Deal, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Связанная сделка')
+    class MeetingStatus(models.TextChoices):
+        TO_ASSIGN = 'назначить', 'Назначить'
+        ASSIGNED = 'назначена', 'Назначена'
+        HELD = 'проведена', 'Проведена'
+        CANCELED = 'отменена', 'Отменена'
+
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, verbose_name='Заказчик', null=True, blank=True)
+    decision_maker = models.ForeignKey(
+        Decision_maker, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='ЛПР'
+    )
+    responsible_user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                         verbose_name='Ответственный')
+
+    # Разделяем на дату и время
+    meeting_date = models.DateField(verbose_name='Дата встречи', blank=True, null=True)
+    meeting_time = models.TimeField(verbose_name='Время встречи', blank=True, null=True)
+
+    status = models.CharField(
+        max_length=20,
+        choices=MeetingStatus.choices,
+        default=MeetingStatus.TO_ASSIGN,
+        verbose_name='Статус'
+    )
+    goal_description = models.TextField(max_length=3500, verbose_name='Описание цели', blank=True, null=True)
+    result_description = models.TextField(max_length=3500, verbose_name='Описание результата', blank=True, null=True)
+
+    def save(self, *args, **kwargs):
+        # Автоподстановка ЛПР по заказчику
+        if self.customer and not self.decision_maker:
+            self.decision_maker = getattr(self.customer, 'decision_maker', None)
+        super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"Встреча с {self.decision_maker.full_name if self.decision_maker else 'ЛПР'}"
+        customer_name = str(self.customer) if self.customer else "Неизвестный заказчик"
+
+        if self.meeting_date and self.meeting_time:
+            date_time_str = f"{self.meeting_date:%d.%m.%Y} {self.meeting_time}"
+        elif self.meeting_date:
+            date_time_str = f"{self.meeting_date:%d.%m.%Y}"
+        else:
+            date_time_str = "дата не указана"
+
+        return f"Встреча с {customer_name} ({date_time_str})"
 
     class Meta:
         verbose_name = 'Встреча'
         verbose_name_plural = 'Встречи'
-        ordering = ['-planned_date']
+        ordering = ['meeting_date', 'meeting_time']
+
+
+class MeetingFile(models.Model):
+    meeting = models.ForeignKey(Meeting, on_delete=models.CASCADE, related_name='files', verbose_name='Встреча')
+    file = models.FileField(
+        upload_to='meeting_files/%Y/%m/%d/',
+        verbose_name='Файл',
+        validators=[validate_file_size]  # Используем существующий валидатор
+    )
+    uploaded_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата загрузки')
+    description = models.CharField(max_length=255, blank=True, null=True, verbose_name='Описание файла')
+
+    def __str__(self):
+        return f"Файл {self.file.name} для встречи #{self.meeting.id}"
+
+    class Meta:
+        verbose_name = 'Файл встречи'
+        verbose_name_plural = 'Файлы встречи'
+        ordering = ['-uploaded_at']
+
+
+
+# Модели для модуля Техподдержка
+class TicketCategory(models.Model):
+    CATEGORY_CHOICES = [
+        ('question', 'Вопрос'),
+        ('error', 'Ошибка'),
+        ('consultation', 'Консультация'),
+        ('improvement', 'Запрос на улучшение'),
+    ]
+
+    name = models.CharField(max_length=100, choices=CATEGORY_CHOICES, verbose_name='Название категории')
+    description = models.TextField(blank=True, verbose_name='Описание')
+
+    def __str__(self):
+        return self.get_name_display()  # Показывает читаемое название
+
+    class Meta:
+        verbose_name = 'Категория заявок'
+        verbose_name_plural = 'Категории заявок'
+        ordering = ['name']
+
+
+# Заявки техподдержки
+class SupportTicket(models.Model):
+    STATUS_NEW = 'new'
+    STATUS_IN_PROGRESS = 'in_progress'
+    STATUS_WAITING = 'waiting'
+    STATUS_RESOLVED = 'resolved'
+
+    STATUS_CHOICES = [
+        (STATUS_NEW, 'Новая'),
+        (STATUS_IN_PROGRESS, 'В работе'),
+        (STATUS_WAITING, 'Ожидает ответа заказчика'),
+        (STATUS_RESOLVED, 'Решена/Закрыта'),
+    ]
+
+    # Основные поля
+    created_date = models.DateTimeField(default=timezone.now, verbose_name='Дата поступления')
+    customer = models.ForeignKey('Customer', on_delete=models.CASCADE, verbose_name='Заказчик')
+    product = models.ForeignKey('Product', on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Продукт')
+    category = models.ForeignKey(TicketCategory, on_delete=models.SET_NULL, null=True, verbose_name='Категория')
+    problem = models.CharField(max_length=200, verbose_name='Проблема')
+    description = models.TextField(verbose_name='Описание (ход решения)', blank=True)
+
+    # Статус и даты
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_NEW, verbose_name='Статус')
+    status_changed_date = models.DateTimeField(auto_now=True, verbose_name='Дата изменения статуса')
+
+    # Пользователи
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True,
+                                   related_name='created_tickets', verbose_name='Создал')
+    assigned_to = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                    related_name='assigned_tickets', verbose_name='Назначенный агент')
+
+    def save(self, *args, **kwargs):
+        """Автоматическое обновление даты изменения статуса"""
+        if self.pk:
+            original = SupportTicket.objects.get(pk=self.pk)
+            if original.status != self.status:
+                self.status_changed_date = timezone.now()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Заявка #{self.id} - {self.problem}"
+
+    class Meta:
+        verbose_name = 'Заявка'
+        verbose_name_plural = 'Заявки'
+        ordering = ['-created_date']
+
+
+# Комментарии к заявкам
+class TicketComment(models.Model):
+    ticket = models.ForeignKey(SupportTicket, on_delete=models.CASCADE, related_name='comments', verbose_name='Заявка')
+    author = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Автор')
+    text = models.TextField(verbose_name='Комментарий')
+    created_date = models.DateTimeField(default=timezone.now, verbose_name='Дата создания')
+    file = models.FileField(upload_to='ticket_comments/%Y/%m/%d/', blank=True, null=True,
+                            verbose_name='Файл', validators=[validate_file_size])
+
+    def __str__(self):
+        return f"Комментарий к #{self.ticket.id} от {self.author.username}"
+
+    class Meta:
+        verbose_name = 'Комментарий заявки'
+        verbose_name_plural = 'Комментарии заявок'
+        ordering = ['created_date']
+
+
+# Прикрепленные файлы к заявкам
+class KnowledgeBaseArticle(models.Model):
+    STATUS_DRAFT = 'draft'
+    STATUS_PUBLISHED = 'published'
+    STATUS_ARCHIVED = 'archived'
+
+    STATUS_CHOICES = [
+        (STATUS_DRAFT, 'Черновик'),
+        (STATUS_PUBLISHED, 'Опубликовано'),
+        (STATUS_ARCHIVED, 'Архив'),
+    ]
+
+    title = models.CharField(max_length=200, verbose_name='Заголовок')
+    category = models.ForeignKey(TicketCategory, on_delete=models.SET_NULL, null=True, verbose_name='Категория')
+    content = models.TextField(verbose_name='Содержание')
+    created_date = models.DateTimeField(default=timezone.now, verbose_name='Дата создания')
+    updated_date = models.DateTimeField(auto_now=True, verbose_name='Дата обновления')
+    author = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Автор')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_DRAFT, verbose_name='Статус')
+    file = models.FileField(upload_to='knowledge_base/%Y/%m/%d/', blank=True, null=True,
+                            verbose_name='Файл', validators=[validate_file_size])
+
+    def __str__(self):
+        return self.title
+
+    class Meta:
+        verbose_name = 'Статья базы знаний'
+        verbose_name_plural = 'База знаний'
+        ordering = ['-updated_date']
