@@ -20,10 +20,21 @@ from .models import ProtocolTechnicalProposal
 from crm.models import Notifications, Customer, Decision_maker, Deal, Product, Deal_stage, Call, Letter, Company_branch, Meeting
 from .models import TechnicalAssignment, TaskForDesignWork, RevisionTask, WorkAssignment
 from .forms import WorkAssignmentForm
+from django.shortcuts import redirect, render
+from django.utils import timezone
 from .models import WorkAssignmentDeadlineChange
 from .admin_forms import RescheduleAdminForm
 from .services import WorkAssignmentService
+from django import forms
 from .models import (Process, Route, RouteProcess, CheckDocumentWorkflow, ApprovalDocumentWorkflow)
+from .helpers import (
+    first_incomplete_step_code,
+    next_step_code_after,
+    wf_step_responsible,
+    wf_step_is_signed,
+    wf_step_set_comment,
+    PROCESS_FIELD_MAP,
+)
 
 
 @admin.register(TechnicalProposal)
@@ -94,10 +105,10 @@ class ListTechnicalProposalAdmin(admin.ModelAdmin):
     readonly_fields = ('date_of_change',)
 
 
-    def save_model(self, request, obj, form, change):
-        if obj.post and not obj.name:
-            obj.name = obj.post.name
-        super().save_model(request, obj, form, change)
+    #def save_model(self, request, obj, form, change):
+      #  if obj.post and not obj.name:
+        #    obj.name = obj.post.name
+        #super().save_model(request, obj, form, change)
 
 @admin.register(GeneralDrawingProduct)
 class GeneralDrawingProductAdmin(admin.ModelAdmin):
@@ -534,7 +545,7 @@ class WorkAssignmentAdmin(admin.ModelAdmin):
         'result', 'version',
         'target_deadline', 'hard_deadline',
         'control_status', 'control_date',
-        'deadline_version', 'reschedule_count',  # служебные
+        'deadline_version', 'reschedule_count', # служебные
     )
     search_fields = ('name','author__username','current_responsible__username')
     list_filter = ('result','control_status')
@@ -549,7 +560,8 @@ class WorkAssignmentAdmin(admin.ModelAdmin):
             'fields': (
                 'name', 'category', 'technical_assignment',
                 'author', 'current_responsible', 'version',
-                'task', 'acceptance_criteria'
+                'task', 'acceptance_criteria',
+                        'uploaded_file'
             )
         }),
         ('Сроки (правьте через «Перенести срок»)', {
@@ -763,25 +775,6 @@ class RouteProcessInline(admin.TabularInline):
     ordering = ("order",)
 
 
-@admin.register(CheckDocumentWorkflow)
-class CheckDocumentWorkflowAdmin(admin.ModelAdmin):
-    list_display = ("desig_or_name_document", "process_sequence", "author", "current_responsible", "date_of_change")
-    list_filter = (
-        "process_sequence",
-        "check_technical_requirements",
-        "check_it_requirements",
-        "check_3D_model",
-        "norm_control",
-    )
-    search_fields = (
-        "desig_or_name_document",
-        "types_check_document",
-        "author__username",
-        "last_editor__username",
-        "current_responsible__username",
-    )
-    autocomplete_fields = ("author", "last_editor", "current_responsible")
-
 
 @admin.register(ApprovalDocumentWorkflow)
 class ApprovalDocumentWorkflowAdmin(admin.ModelAdmin):
@@ -803,3 +796,212 @@ class RouteAdmin(admin.ModelAdmin):
         "check_document",
         "approval_document",
     )
+
+    def sequence_preview(self, obj: Route):
+        # «IT → Тех → Нормо» — просто подсказка
+        steps = (obj.routeprocess_set
+                 .select_related("process")
+                 .order_by("order")
+                 .values_list("process__name", flat=True))
+        return " → ".join(steps) if steps else "—"
+    sequence_preview.short_description = "Последовательность"
+
+    def visible_reviewer(self, obj: Route):
+        """
+        показывает ТОЛЬКО текущего проверяющего по связанному workflow (Route.check_document).
+        идея: пока первый шаг не подписан — виден только его юзер;
+              после подписи — виден следующий.
+        """
+        wf = obj.check_document
+        if not wf:
+            return "—"
+        code = first_incomplete_step_code(obj, wf)
+        if not code:
+            return "—"
+        user = wf_step_responsible(wf, code)
+        return getattr(user, "get_username", lambda: str(user))()
+    visible_reviewer.short_description = "Текущий проверяющий"
+
+
+# ==== CHECK DOCUMENT WORKFLOW ====
+
+class ReturnReasonForm(forms.Form):
+    """простая форма для ввода причины возврата"""
+    reason = forms.CharField(
+        label="Причина возврата", widget=forms.Textarea(attrs={"rows": 4}), required=True
+    )
+
+
+@admin.register(CheckDocumentWorkflow)
+class CheckDocumentWorkflowAdmin(admin.ModelAdmin):
+    list_display = (
+        "current_step_display",          # вычисляемый «Текущий шаг»
+        "current_reviewer_display",      # вычисляемый «Проверяющий сейчас»
+        "it_responsible_display",        # ответственные по этапам (ниже методы)
+        "tech_responsible_display",
+        "m3d_responsible_display",
+        "norm_responsible_display",
+        "date_of_change",
+    )
+    search_fields = (
+        "desig_or_name_document",
+        "types_check_document",
+        "author__username",
+        "last_editor__username",
+        "current_responsible__username",
+        "check_it_requirements_responsible__username",
+        "check_technical_requirements_responsible__username",
+        "check_3D_model_responsible__username",
+        "norm_control_responsible__username",
+    )
+    list_filter = (
+        "process_sequence",
+        "check_it_requirements",
+        "check_technical_requirements",
+        "check_3D_model",
+        "norm_control",
+    )
+    autocomplete_fields = ("author", "last_editor", "current_responsible")
+
+    # ---- служебное: определяем текущий шаг по первому НЕподписанному в маршруте ----
+    def _current_code(self, obj: CheckDocumentWorkflow) -> str | None:
+        route = obj.routes.first()   # WF <- Route (related_name='routes' со стороны Route.check_document)
+        if not route:
+            return None
+        return first_incomplete_step_code(route, obj)
+
+    # ---- вычисляемые колонки ----
+    def current_step_display(self, obj):
+        return self._current_code(obj) or "—"
+    current_step_display.short_description = "Текущий шаг"
+
+    def current_reviewer_display(self, obj):
+        code = self._current_code(obj)
+        if not code:
+            return "—"
+        user = wf_step_responsible(obj, code)
+        return getattr(user, "get_username", lambda: str(user))() if user else "—"
+    current_reviewer_display.short_description = "Проверяющий сейчас"
+
+    # ---- вывод ответственных с подсветкой текущего шага ----
+    def _fmt_user(self, user, highlight: bool):
+        if not user:
+            return "—"
+        text = getattr(user, "get_username", lambda: str(user))()
+        return format_html("<b>{}</b>", text) if highlight else text
+
+    def it_responsible_display(self, obj):
+        u = getattr(obj, "check_it_requirements_responsible", None)
+        return self._fmt_user(u, self._current_code(obj) == "it_requirements")
+    it_responsible_display.short_description = "IT"
+
+    def tech_responsible_display(self, obj):
+        u = getattr(obj, "check_technical_requirements_responsible", None)
+        return self._fmt_user(u, self._current_code(obj) == "tech_requirements")
+    tech_responsible_display.short_description = "Техтреб."
+
+    def m3d_responsible_display(self, obj):
+        u = getattr(obj, "check_3D_model_responsible", None)
+        # если код процесса для 3D у тебя другой — поменяй сравнение
+        return self._fmt_user(u, self._current_code(obj) == "model3d_check")
+    m3d_responsible_display.short_description = "3D"
+
+    def norm_responsible_display(self, obj):
+        u = getattr(obj, "norm_control_responsible", None)
+        return self._fmt_user(u, self._current_code(obj) == "norm_control")
+    norm_responsible_display.short_description = "Нормоконтроль"
+
+    # ---- ACTION: Подтвердить текущий шаг ----
+    @admin.action(description="Подтвердить текущий шаг (подписать) и передать далее")
+    def confirm_current_step(self, request, queryset):
+        """
+        1) ставим ..._signature = True для текущего шага
+        2) назначаем current_responsible = ответственный следующего шага (если есть)
+        """
+        updated = 0
+        for wf in queryset:
+            route = wf.routes.first()
+            if not route:
+                continue
+            cur = first_incomplete_step_code(route, wf)
+            if not cur:
+                continue  # все шаги уже закрыты
+            # 1) подписываем текущий шаг
+            sig_field = PROCESS_FIELD_MAP.get(cur, {}).get("signature")
+            if sig_field:
+                setattr(wf, sig_field, True)
+            # 2) находим следующего и назначаем ответственным
+            nxt = next_step_code_after(route, cur)
+            next_user = wf_step_responsible(wf, nxt) if nxt else None
+            if next_user:
+                wf.current_responsible = next_user
+            wf.date_of_change = timezone.now()
+            wf.save()
+            updated += 1
+        self.message_user(request, f"Подтверждено и передано дальше: {updated}", messages.SUCCESS)
+
+    # ---- Кнопка/роут «Вернуть отправителю» с причиной ----
+    change_form_template = "admin/blog/checkworkflow_changeform.html"  # добавим кнопку на форме
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom = [
+            path(
+                "<path:object_id>/return/",
+                self.admin_site.admin_view(self.return_to_author_view),
+                name="blog_checkdocumentworkflow_return",
+            ),
+        ]
+        return custom + urls
+
+    def return_to_author_view(self, request, object_id):
+        """
+        страница с формой "причина возврата" → сохраняем в соответствующий ..._comment
+        и назначаем current_responsible = author (или кому нужно)
+        """
+        wf = self.get_object(request, object_id)
+        if not wf:
+            self.message_user(request, "Объект не найден", messages.ERROR)
+            return redirect("admin:blog_checkdocumentworkflow_changelist")
+
+        route = wf.routes.first()
+        cur = first_incomplete_step_code(route, wf) if route else None
+        if request.method == "POST":
+            form = ReturnReasonForm(request.POST)
+            if form.is_valid():
+                reason = form.cleaned_data["reason"]
+                # пишем причину в комментарий текущего шага
+                if cur:
+                    wf_step_set_comment(wf, cur, reason)
+                # назначаем "отправителю" (здесь — автору WF; при желании можно route.author)
+                wf.current_responsible = wf.author
+                wf.date_of_change = timezone.now()
+                wf.save()
+                self.message_user(request, "Документ возвращён отправителю", messages.SUCCESS)
+                return redirect("admin:blog_checkdocumentworkflow_change", object_id=wf.pk)
+        else:
+            form = ReturnReasonForm()
+
+        context = dict(
+            self.admin_site.each_context(request),
+            title="Вернуть отправителю",
+            original=wf,
+            form=form,
+            current_step=cur or "—",
+        )
+        return render(request, "admin/blog/return_to_author.html", context)
+
+    @admin.action(description="Вернуть отправителю (указать причину на форме объекта)")
+    def return_to_author(self, request, queryset):
+        """
+        экшен-подсказка: для единичного объекта переадресуем на форму возврата,
+        для мульти — выдадим подсказку
+        """
+        if queryset.count() != 1:
+            self.message_user(
+                request, "Выберите один объект и нажмите кнопку 'Вернуть отправителю' на его форме.",
+                messages.WARNING
+            )
+            return
+        obj = queryset.first()
+        return redirect("admin:blog_checkdocumentworkflow_return", object_id=obj.pk)
