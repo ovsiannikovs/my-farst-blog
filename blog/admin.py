@@ -1,40 +1,64 @@
-from django.contrib import admin, messages
-from django.urls import reverse, path
-from django.utils.html import format_html
-from .models import Post
-from .models import TechnicalProposal
-from .models import ListTechnicalProposal
-from .models import GeneralDrawingProduct
-from .models import ElectronicModelProduct
-from .models import GeneralElectricalDiagram
-from .models import SoftwareProduct
-from .models import GeneralDrawingUnit
-from .models import ElectronicModelUnit
-from .models import DrawingPartUnit
-from .models import ElectronicModelPartUnit
-from .models import DrawingPartProduct
-from .models import ElectronicModelPartProduct
-from .models import ReportTechnicalProposal
-from .models import AddReportTechnicalProposal
-from .models import ProtocolTechnicalProposal
-from crm.models import Notifications, Customer, Decision_maker, Deal, Product, Deal_stage, Call, Letter, Company_branch, Meeting
-from .models import TechnicalAssignment, TaskForDesignWork, RevisionTask, WorkAssignment
-from .forms import WorkAssignmentForm
-from django.shortcuts import redirect, render
-from django.utils import timezone
-from .models import WorkAssignmentDeadlineChange
-from .admin_forms import RescheduleAdminForm
-from .services import WorkAssignmentService
 from django import forms
-from .models import (Process, Route, RouteProcess, CheckDocumentWorkflow, ApprovalDocumentWorkflow)
+from django.contrib import admin, messages
+from django.shortcuts import redirect, render
+from django.urls import path, reverse
+from django.utils import timezone
+from django.utils.html import format_html
+
+from crm.models import (
+    Call,
+    Company_branch,
+    Deal,
+    Deal_stage,
+    Decision_maker,
+    Letter,
+    Meeting,
+    Notifications,
+    Product,
+    Customer,
+)
+
+
+from .admin_forms import RescheduleAdminForm
+from .forms import WorkAssignmentForm
 from .helpers import (
     first_incomplete_step_code,
     next_step_code_after,
-    wf_step_responsible,
-    wf_step_is_signed,
-    wf_step_set_comment,
     PROCESS_FIELD_MAP,
+    wf_step_is_signed,
+    wf_step_responsible,
+    wf_step_set_comment,
 )
+from .models import (
+    AddReportTechnicalProposal,
+    ApprovalDocumentWorkflow,
+    CheckDocumentWorkflow,
+    DrawingPartProduct,
+    DrawingPartUnit,
+    ElectronicModelPartProduct,
+    ElectronicModelPartUnit,
+    ElectronicModelProduct,
+    ElectronicModelUnit,
+    GeneralDrawingProduct,
+    GeneralDrawingUnit,
+    GeneralElectricalDiagram,
+    ListTechnicalProposal,
+    Post,
+    Process,
+    ProtocolTechnicalProposal,
+    ReportTechnicalProposal,
+    Route,
+    RouteProcess,
+    SoftwareProduct,
+    TechnicalAssignment,
+    TechnicalProposal,
+    TaskForDesignWork,
+    RevisionTask,
+    WorkAssignment,
+    WorkAssignmentDeadlineChange,
+)
+from .services import WorkAssignmentService
+
 
 
 @admin.register(TechnicalProposal)
