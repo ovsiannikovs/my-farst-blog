@@ -3,6 +3,7 @@ from django.utils import timezone
 from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
 from django.conf import settings
+from django.utils.text import Truncator
 
 User = settings.AUTH_USER_MODEL
 User = get_user_model()
@@ -160,6 +161,7 @@ class GeneralDrawingProduct(models.Model):
         ('Низкий', 'Низкий'),
     ]
     category = models.CharField(max_length=50, default='ВО', verbose_name="Категория")
+    post = models.ForeignKey('Post', on_delete=models.CASCADE, null=True, blank=True, related_name='general_drawin_products')
     name = models.CharField(max_length=100, default='ПАК СПМ 2.13 Чертеж общего вида изделия', verbose_name="Наименование")
     desig_document_general_drawing_product = models.CharField(max_length=50, unique=True, verbose_name="Обозначение документа", null=True)
     info_format = models.CharField(max_length=20, choices=INFO_FORMAT_CHOICES, verbose_name="Формат представления информации")
@@ -909,7 +911,7 @@ class ListTechnicalProposal(models.Model):
     category = models.CharField(max_length=50, default='ВПТ', verbose_name="Категория")
     name = models.CharField(max_length=150, blank=True, verbose_name="Наименование")
     post = models.ForeignKey('Post', on_delete=models.CASCADE, null=True, blank=True, related_name='list_technical_proposals')
-    desig_document_list_technical_proposal = models.CharField(max_length=50, unique=True, verbose_name="Обозначение изделия", default='1')
+    desig_document_list_technical_proposal = models.CharField(max_length=50, unique=True, verbose_name="Обозначение документа", default='1')
     info_format = models.CharField(max_length=20, choices=INFO_FORMAT_CHOICES, default='ДЭ', verbose_name="Формат представления информации")
     change_number = models.CharField(max_length=20, default='без изм', verbose_name="Номер изменения")
     author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Автор")
@@ -930,6 +932,19 @@ class ListTechnicalProposal(models.Model):
     develop_org = models.CharField(max_length=100, default='ООО "СИСТЕМА"', verbose_name="Организация-разработчик")
     language = models.CharField(max_length=10, default='rus', verbose_name="Язык")
     uploaded_file = models.FileField(upload_to='uploads/', blank = True, verbose_name="Загружаемый файл")
+
+    SEP = " — "
+
+    def build_name(self) -> str:
+        parent_part = (self.post.name if self.post_id else "").strip()
+        category_part = (self.category or "").strip()
+        parts = [p for p in (parent_part, category_part) if p]
+        return self.SEP.join(parts)
+
+    def save(self, *args, **kwargs):
+        # всегда пересобираем name из post.name и category
+        self.name = self.build_name()
+        super().save(*args, **kwargs)
 
     class Meta:
         verbose_name = 'Ведомость технического предложения'
@@ -1109,6 +1124,7 @@ class WorkAssignment(models.Model):
     # базовые поля
     name = models.CharField(max_length=100, unique=True, blank=True, null=True, verbose_name="Наименование")
     category = models.CharField(max_length=100, default="РЗ", verbose_name="Категория")
+    task = models.CharField('Задача', max_length=255, blank=True)
     technical_assignment = models.ForeignKey(
         'TechnicalAssignment',
         on_delete=models.CASCADE,
@@ -1132,6 +1148,7 @@ class WorkAssignment(models.Model):
     version = models.CharField(max_length=3, blank=True, null=True, verbose_name="Версия")
     task = models.TextField(verbose_name="Задача")
     acceptance_criteria = models.TextField(default='---', verbose_name="Критерий выполнения")
+    uploaded_file = models.FileField(upload_to='uploads/', blank = True, verbose_name="Загружаемый файл")
 
     deadline_version = models.PositiveIntegerField(default=0, verbose_name="Версия дедлайна")
     reschedule_count = models.PositiveIntegerField(default=0, verbose_name="Количество переносов")
@@ -1146,6 +1163,7 @@ class WorkAssignment(models.Model):
     time_window_start = models.DateField("Временное окно: с", null=True, blank=True)
     time_window_end = models.DateField("Временное окно: по", null=True, blank=True)
     conditional_deadline = models.CharField("Условный дедлайн", max_length=1000, blank=True)
+    uploaded_file = models.FileField(upload_to='uploads/', blank = True, verbose_name="Загружаемый файл")
 
     control_status = models.CharField(
         "Контроль срока — статус",
@@ -1155,6 +1173,19 @@ class WorkAssignment(models.Model):
         choices=TEMP_STATUS_CHOICES,
     )
     control_date = models.DateField("Контроль срока — дата", null=True, blank=True)
+
+    def _build_name(self) -> str:
+        sep = " — "  # любой разделитель
+        technical_assignment_part = (self.technical_assignment.name if self.technical_assignment_id else "").strip()
+
+        # Нормализуем и режем вторую часть до 50 символов без троеточия
+        task_clean = " ".join((self.task or "").split())
+        # чтобы не переполнить name, сначала считаем доступную длину под вторую часть
+        max_len = self._meta.get_field('name').max_length
+        allowed_for_task = max(0, min(50, max_len - len(sep) - len(technical_assignment_part)))
+        task_part = Truncator(task_clean).chars(allowed_for_task, truncate='')
+
+        return f"{technical_assignment_part}{sep}{task_part}" if task_part else technical_assignment_part
 
     def clean(self):
         super().clean()
@@ -1182,9 +1213,7 @@ class WorkAssignment(models.Model):
         verbose_name_plural = 'Рабочие задания'
 
     def save(self, *args, **kwargs):
-        # автоподстановка имени из ТЗ
-        if self.technical_assignment and not self.name:
-            self.name = self.technical_assignment.name
+        self.name = self._build_name()
         super().save(*args, **kwargs)
 
     def clean(self):
@@ -1371,13 +1400,14 @@ class CheckDocumentWorkflow(models.Model):
         help_text="Напр.: ЭД, ПД, 3D-модель и т.д."
     )
     # 9 Обозначение/наименование документа
-    desig_or_name_document = models.CharField(max_length=100)
+    desig_document_check_doc = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, null=True, blank=True)
     # 10 Загружаемый файл
     uploaded_file = models.FileField(upload_to="check_docs/", help_text="PDF с ЭЦП разработчика")
 
     # --- Блок «Проверка технических требований» ---
     check_technical_requirements = models.CharField(max_length=3, choices=YES_NO_CHOICES, blank=True)
-    check_technical_requirements_responsible = models.CharField(max_length=255, blank=True)
+    check_technical_requirements_responsible = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name="check_technical_requirements_responsibles")
     check_technical_requirements_resolution = models.CharField(max_length=10, choices=RESOLUTION_CHOICES, blank=True)
     check_technical_requirements_comment = models.TextField(max_length=5000, blank=True)
     check_technical_requirements_date_of_resolution = models.DateTimeField(null=True, blank=True)
@@ -1386,7 +1416,7 @@ class CheckDocumentWorkflow(models.Model):
 
     # --- Блок «Проверка IT требований» ---
     check_it_requirements = models.CharField(max_length=3, choices=YES_NO_CHOICES, blank=True)
-    check_it_requirements_responsible = models.CharField(max_length=255, blank=True)
+    check_it_requirements_responsible = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name="check_it_requirements_responsibles")
     check_it_requirements_resolution = models.CharField(max_length=10, choices=RESOLUTION_CHOICES, blank=True)
     check_it_requirements_comment = models.TextField(max_length=5000, blank=True)
     check_it_requirements_date_of_resolution = models.DateTimeField(null=True, blank=True)
@@ -1395,7 +1425,7 @@ class CheckDocumentWorkflow(models.Model):
 
     # --- Блок «Проверка 3D-моделей» ---
     check_3D_model = models.CharField(max_length=3, choices=YES_NO_CHOICES, blank=True)
-    check_3D_model_responsible = models.CharField(max_length=255, blank=True)
+    check_3D_model_responsible = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name="check_3D_model_responsibles")
     check_3D_model_resolution = models.CharField(max_length=10, choices=RESOLUTION_CHOICES, blank=True)
     check_3D_model_comment = models.TextField(max_length=5000, blank=True)
     check_3D_model_date_of_resolution = models.DateTimeField(null=True, blank=True)
@@ -1404,7 +1434,7 @@ class CheckDocumentWorkflow(models.Model):
 
     # --- Блок «Нормоконтроль» ---
     norm_control = models.CharField(max_length=3, choices=YES_NO_CHOICES, blank=True)
-    norm_control_responsible = models.CharField(max_length=255, blank=True)
+    norm_control_responsible = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name="norm_control_responsibles")
     norm_control_resolution = models.CharField(max_length=10, choices=RESOLUTION_CHOICES, blank=True)
     norm_control_comment = models.TextField(max_length=5000, blank=True)
     norm_control_date_of_resolution = models.DateTimeField(null=True, blank=True)
@@ -1426,7 +1456,7 @@ class CheckDocumentWorkflow(models.Model):
         ordering = ("-date_of_creation",)
 
     def __str__(self):
-        return f"Проверка: {self.desig_or_name_document} (v{self.version or '-'})"
+        return f"Проверка: {self.desig_document_check_doc} (v{self.version or '-'})"
 
     def save(self, *args, **kwargs):
         self.date_of_change = timezone.now()
