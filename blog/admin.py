@@ -56,10 +56,16 @@ from .models import (
     RevisionTask,
     WorkAssignment,
     WorkAssignmentDeadlineChange,
+    Attachment,
 )
 from .services import WorkAssignmentService
 
 
+
+class AttachmentInline(admin.TabularInline):
+    model = Attachment
+    extra = 1  # сколько пустых строк показывать
+    fields = ('file',)
 
 @admin.register(TechnicalProposal)
 class TechnicalProposalAdmin(admin.ModelAdmin):
@@ -563,7 +569,7 @@ class WorkAssignmentAdmin(admin.ModelAdmin):
     #form = WorkAssignmentForm
 
     list_display = (
-        'name', 'category', 'author',
+        'name', 'author', 'executor', 'technical_assignment',
         'effective_deadline_readonly',  # новый столбец
         'overdue_flag',                 # новый столбец
         'result', 'version',
@@ -577,18 +583,18 @@ class WorkAssignmentAdmin(admin.ModelAdmin):
     readonly_fields = ('date_of_creation','date_of_change',
                        'effective_deadline_readonly','deadline_version','reschedule_count')
 
-    inlines = [DeadlineChangeInline]
+    inlines = [DeadlineChangeInline, AttachmentInline]
 
     fieldsets = (
         ('Основная информация', {
             'fields': (
-                'name', 'category', 'technical_assignment',
+                'name', 'executor', 'category', 'technical_assignment',
                 'author', 'current_responsible', 'version',
                 'task', 'acceptance_criteria',
                         'uploaded_file'
             )
         }),
-        ('Сроки (правьте через «Перенести срок»)', {
+        ('Сроки (изменять через «Перенести срок»)', {
             'fields': (
                 'target_deadline', 'hard_deadline',
                 ('time_window_start', 'time_window_end'),
@@ -1029,3 +1035,7 @@ class CheckDocumentWorkflowAdmin(admin.ModelAdmin):
             return
         obj = queryset.first()
         return redirect("admin:blog_checkdocumentworkflow_return", object_id=obj.pk)
+
+    @admin.register(Attachment)
+    class AttachmentAdmin(admin.ModelAdmin):
+        list_display = ('id', 'work', 'file')

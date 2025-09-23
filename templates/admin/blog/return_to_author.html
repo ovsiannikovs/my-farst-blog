@@ -1,0 +1,12 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+{% block content %}
+  <h1>Вернуть отправителю: {{ original }}</h1>
+  <p>Текущий шаг: <b>{{ current_step }}</b></p>
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {{ form.as_p }}
+    <input type="submit" class="default" value="Отправить">
+    <a class="button" href="{% url 'admin:blog_checkdocumentworkflow_change' original.pk %}">Отмена</a>
+  </form>
+{% endblock %}

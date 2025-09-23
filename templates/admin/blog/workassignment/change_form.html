@@ -3,8 +3,45 @@
 {% block object-tools-items %}
   {{ block.super }}
   <li>
-    <a href="{% url 'admin:blog_workassignment_reschedule' original.pk %}">
+    <a id="reschedule-link" href="{% url 'admin:blog_workassignment_reschedule' original.pk %}">
       Перенести срок
     </a>
   </li>
+{% endblock %}
+
+{% block extrahead %}
+  {{ block.super }}
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      var link = document.getElementById("reschedule-link");
+      if (!link) return;
+
+      // Найдём строку поля (замени target_deadline при необходимости)
+      var row = document.querySelector(".form-row.field-target_deadline")
+             || document.querySelector(".fieldBox.field-target_deadline");
+      if (!row) return;
+
+      var target = row.querySelector("input, select, textarea") || row;
+
+      // Делаем «кнопку» из ссылки
+      var moved = link.cloneNode(true);
+      moved.classList.add("button","default");
+      moved.style.marginLeft = ".5rem";
+
+      // Обёртка: поле слева, кнопка справа
+      var wrap = document.createElement("div");
+      wrap.style.display = "flex";
+      wrap.style.alignItems = "center";
+      wrap.style.gap = ".5rem";
+
+      // Вставляем перед полем и кладём внутрь: СНАЧАЛА поле, ПОТОМ кнопку
+      target.parentElement.insertBefore(wrap, target);
+      wrap.appendChild(target);
+      wrap.appendChild(moved);
+
+      // Убираем оригинал из object tools
+      var li = link.closest("li");
+      if (li) li.remove();
+    });
+  </script>
 {% endblock %}

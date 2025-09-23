@@ -1,0 +1,20 @@
+<form method="post" enctype="multipart/form-data">
+  {% csrf_token %}
+
+  <div>
+    <label>Заголовок</label>
+    <input type="text" name="title" required>
+  </div>
+
+  <div>
+    <label>Описание</label>
+    <textarea name="description"></textarea>
+  </div>
+
+  <div>
+    <label>Файлы</label>
+    <input type="file" name="files" multiple>
+  </div>
+
+  <button type="submit">Сохранить</button>
+</form>
