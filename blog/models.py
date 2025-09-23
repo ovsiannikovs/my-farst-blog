@@ -75,6 +75,9 @@ class ConformityAssessment(models.Model):
     def __str__(self): return self.title
 
 
+
+
+
 # Модель Post
 class Post(models.Model):
     LITERA_CHOICES = [
@@ -1012,7 +1015,7 @@ class TaskForDesignWork(models.Model):
 
     name = models.CharField(max_length=100, unique=True, blank=True, null=True, verbose_name="наименование")
     category = models.CharField(max_length=100, default="ТЗ ОКР", verbose_name="категория")
-    technical_assignment = models.ForeignKey('TechnicalAssignment', on_delete=models.CASCADE, null=True, blank=True, related_name='design_works', verbose_name="Связанное техническое задание")
+    technical_assignment = models.ForeignKey('TechnicalAssignment', on_delete=models.CASCADE, null=True, blank=True, related_name='design_works', verbose_name="Связанное техническое задание (Разработка)")
     info_format = models.CharField(max_length=100, choices=INFO_FORMAT_CHOICES, blank=True, null=True,
                                    verbose_name="формат предоставления информации")
     author = models.ForeignKey(User, on_delete=models.CASCADE, related_name="created_designtasks", verbose_name="автор")
@@ -1124,13 +1127,14 @@ class WorkAssignment(models.Model):
     # базовые поля
     name = models.CharField(max_length=100, unique=True, blank=True, null=True, verbose_name="Наименование")
     category = models.CharField(max_length=100, default="РЗ", verbose_name="Категория")
+    executor = models.ForeignKey(User, on_delete=models.CASCADE, null= True, related_name= "executed_workassignments", verbose_name="Исполнитель")
     task = models.CharField('Задача', max_length=255, blank=True)
     technical_assignment = models.ForeignKey(
         'TechnicalAssignment',
         on_delete=models.CASCADE,
         null=True, blank=True,
         related_name='work_assignments',
-        verbose_name="Связанное техническое задание"
+        verbose_name="Связанное техническое задание (Разработка)"
     )
     author = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Автор")
     date_of_creation = models.DateTimeField(default=timezone.now, verbose_name="Дата и время создания")
@@ -1163,7 +1167,7 @@ class WorkAssignment(models.Model):
     time_window_start = models.DateField("Временное окно: с", null=True, blank=True)
     time_window_end = models.DateField("Временное окно: по", null=True, blank=True)
     conditional_deadline = models.CharField("Условный дедлайн", max_length=1000, blank=True)
-    uploaded_file = models.FileField(upload_to='uploads/', blank = True, verbose_name="Загружаемый файл")
+    uploaded_file = models.FileField(upload_to='uploads/', blank = True, verbose_name="Приложение к РЗ")
 
     control_status = models.CharField(
         "Контроль срока — статус",
@@ -1174,18 +1178,18 @@ class WorkAssignment(models.Model):
     )
     control_date = models.DateField("Контроль срока — дата", null=True, blank=True)
 
-    def _build_name(self) -> str:
-        sep = " — "  # любой разделитель
-        technical_assignment_part = (self.technical_assignment.name if self.technical_assignment_id else "").strip()
+   #def _build_name(self) -> str:
+    #    sep = " — "  # любой разделитель
+     #   technical_assignment_part = (self.technical_assignment.name if self.technical_assignment_id else "").strip()
+#
+ #       # Нормализуем и режем вторую часть до 50 символов без троеточия
+  #      task_clean = " ".join((self.task or "").split())
+   #     # чтобы не переполнить name, сначала считаем доступную длину под вторую часть
+    #    max_len = self._meta.get_field('name').max_length
+     #   allowed_for_task = max(0, min(50, max_len - len(sep) - len(technical_assignment_part)))
+      #  task_part = Truncator(task_clean).chars(allowed_for_task, truncate='')
 
-        # Нормализуем и режем вторую часть до 50 символов без троеточия
-        task_clean = " ".join((self.task or "").split())
-        # чтобы не переполнить name, сначала считаем доступную длину под вторую часть
-        max_len = self._meta.get_field('name').max_length
-        allowed_for_task = max(0, min(50, max_len - len(sep) - len(technical_assignment_part)))
-        task_part = Truncator(task_clean).chars(allowed_for_task, truncate='')
-
-        return f"{technical_assignment_part}{sep}{task_part}" if task_part else technical_assignment_part
+       # return f"{technical_assignment_part}{sep}{task_part}" if task_part else technical_assignment_part"""
 
     def clean(self):
         super().clean()
@@ -1212,9 +1216,9 @@ class WorkAssignment(models.Model):
         verbose_name = 'Рабочее задание'
         verbose_name_plural = 'Рабочие задания'
 
-    def save(self, *args, **kwargs):
-        self.name = self._build_name()
-        super().save(*args, **kwargs)
+    #def save(self, *args, **kwargs):
+     #   self.name = self._build_name()
+      #  super().save(*args, **kwargs)
 
     def clean(self):
         super().clean()
@@ -1270,34 +1274,68 @@ class WorkAssignment(models.Model):
         return self.name or "Без названия"
 
 class WorkAssignmentDeadlineChange(models.Model):
-    assignment = models.ForeignKey(WorkAssignment, on_delete=models.CASCADE, related_name="deadline_changes")
+    assignment = models.ForeignKey(
+        WorkAssignment,
+        on_delete=models.CASCADE,
+        related_name="deadline_changes",
+        verbose_name="Рабочее задание",
+    )
 
     # что было
     old_target_deadline = models.DateField(null=True, blank=True, verbose_name="старый целевой дедлайн")
-    old_hard_deadline = models.DateField(null=True, blank=True, verbose_name="старый абсолютный дедлайн")
+    old_hard_deadline   = models.DateField(null=True, blank=True, verbose_name="старый абсолютный дедлайн")
     old_time_window_start = models.DateField(null=True, blank=True, verbose_name="старое временное окно с")
-    old_time_window_end = models.DateField(null=True, blank=True, verbose_name="старое временное окно по")
+    old_time_window_end   = models.DateField(null=True, blank=True, verbose_name="старое временное окно по")
+
     # что стало
     new_target_deadline = models.DateField(null=True, blank=True, verbose_name="новый целевой дедлайн")
-    new_hard_deadline = models.DateField(null=True, blank=True, verbose_name="новый абсолютный дедлайн")
+    new_hard_deadline   = models.DateField(null=True, blank=True, verbose_name="новый абсолютный дедлайн")
     new_time_window_start = models.DateField(null=True, blank=True, verbose_name="новое временное окно с")
-    new_time_window_end = models.DateField(null=True, blank=True, verbose_name="новое временное окно по")
+    new_time_window_end   = models.DateField(null=True, blank=True, verbose_name="новое временное окно по")
 
-    reason = models.CharField(max_length=255, blank=True, verbose_name="причина")
-    changed_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, verbose_name="автор")
+    reason = models.CharField(max_length=255, verbose_name="причина")
+    changed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        verbose_name="автор",
+    )
     changed_at = models.DateTimeField(auto_now_add=True, verbose_name="дата и время изменения")
 
+    # локальный порядковый номер переноса внутри assignment
+    index = models.PositiveIntegerField(editable=False, null= True, verbose_name="№ переноса по заданию")
+
     class Meta:
+        verbose_name = "Изменение дедлайна для рабочего задания"
+        verbose_name_plural = "Изменения дедлайна для рабочих заданий"
         ordering = ["-changed_at"]
-        indexes = [models.Index(fields=["assignment", "-changed_at"])]
+        indexes = [
+            models.Index(fields=["assignment", "-changed_at"]),
+            models.Index(fields=["assignment", "index"]),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["assignment", "index"],
+                name="uniq_deadline_change_index_per_assignment",
+            )
+        ]
+
+    def save(self, *args, **kwargs):
+        # присваиваем следующий локальный номер при первом сохранении
+        if self.pk is None and not self.index:
+            with transaction.atomic():
+                last = (
+                    WorkAssignmentDeadlineChange.objects
+                    .filter(assignment=self.assignment)
+                    .select_for_update()
+                    .order_by("-index")
+                    .first()
+                )
+                self.index = (last.index if last else 0) + 1
+        super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"Перенос #{self.pk} для задания {self.assignment_id}"
-
-    class Meta:
-        verbose_name = 'Изменение дедлайна для рабочего задания'
-        verbose_name_plural = 'Изменение дедлайна для рабочих заданий'
-
+        return f"Перенос #{self.index}"
 
 class TechnicalAssignment(models.Model):
     name = models.CharField(max_length=100, unique=True, null=True, blank=True, verbose_name="наименование")
@@ -1538,5 +1576,19 @@ class RouteProcess(models.Model):
     def __str__(self):
         return f"{self.route} → {self.process} ({self.order})"
 
+class Attachment(models.Model):
+    work = models.ForeignKey(
+        WorkAssignment, null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name='attachments'
+    )
+    file = models.FileField(upload_to='work_attachments/%Y/%m/%d/')
 
+    class Meta:
+        verbose_name = 'Вложение'
+        verbose_name_plural = 'Вложения'
+
+    def __str__(self):
+        return self.file.name
 
