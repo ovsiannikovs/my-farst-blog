@@ -826,11 +826,11 @@ class ElectronicModelPartProduct(models.Model):
 class AddReportTechnicalProposal(models.Model):
     category = models.CharField(max_length=50, default="ПЗ ПТ. Приложение", verbose_name="Категория")
 
-    name = models.CharField(max_length=100, verbose_name="Наименование")
+    name = models.CharField(max_length=100, unique=True, verbose_name="Наименование")
 
     INFO_FORMAT_CHOICES = [
-        ("ДБ", "ДБ КД"),
-        ("ДЭ", "ДЭ КД"),
+        ("ДБ", "ДБ"),
+        ("ДЭ", "ДЭ"),
     ]
     info_format = models.CharField(max_length=10, choices=INFO_FORMAT_CHOICES, default="ДЭ", blank=True, verbose_name="Формат представления информации")
 
@@ -844,22 +844,19 @@ class AddReportTechnicalProposal(models.Model):
 
     STATUS_CHOICES = [
         ('Зарегистрирован', 'Зарегистрирован'),
-        ('Рабочий вариант', 'Рабочий вариант'),
-        ('Разработка', 'Разработка'),
-        ('Проверка', 'Проверка'),
-        ('Проверен', 'Проверен'),
-        ('На согласовании', 'На согласовании'),
-        ('Согласован', 'Согласован'),
+        ('В разработке', 'В разработке'),
+        ('На проверке', 'На проверке'),
         ('На утверждении', 'На утверждении'),
-        ('Утвержден', 'Утвержден'),
-        ('Отклонен', 'Отклонен'),
         ('Выпущен', 'Выпущен'),
-        ('Заморожен', 'Заморожен'),
         ('Заменен', 'Заменен'),
-        ('Заблокирован', 'Заблокирован'),
         ('Аннулирован', 'Аннулирован'),
-        ('На пересмотре', 'На пересмотре'),
-        ('Архив', 'Архив'),
+        ('В архиве',  'В архиве')
+    ]
+    PRIORITY_CHOICES = [
+        ('Срочно', 'Срочно'),
+        ('Высокий', 'Высокий'),
+        ('Средний', 'Средний'),
+        ('Низкий', 'Низкий'),
     ]
     status = models.CharField(max_length=30, default='Зарегистрирован', verbose_name="Статус (состояние)")
 
@@ -867,11 +864,13 @@ class AddReportTechnicalProposal(models.Model):
     version_diff = models.TextField(blank=True, default='Стартовая версия', verbose_name="Сравнение версий")
     litera = models.CharField(max_length=2, default='П-', verbose_name="Стадия разработки  (Литера)")
     trl = models.CharField(max_length=10, default='1-', verbose_name="Уровень готовности технологий (TRL)")
+    priority = models.CharField(max_length=30, blank=True, choices=PRIORITY_CHOICES, verbose_name="Приоритет в работе")
 
     validity_date = models.DateField(null=True, blank=True, verbose_name="Срок действия")
     subscribers = models.CharField(max_length=200, blank=True, default='', verbose_name="Внешние и внутренние получатели")
     related_documents = models.TextField(blank=True, default='', verbose_name='Связанные сопроводительные документы')
     develop_org = models.CharField(max_length=100, default='ООО "СИСТЕМА"', verbose_name="Организация-разработчик")
+    uploaded_file_1 = models.FileField(upload_to='uploads/', blank = True, verbose_name="Загружаемый файл")
 
     LANGUAGE_CHOICES = [
         ('rus', 'rus'),
@@ -912,7 +911,7 @@ class ListTechnicalProposal(models.Model):
     ]
 
     category = models.CharField(max_length=50, default='ВПТ', verbose_name="Категория")
-    name = models.CharField(max_length=150, blank=True, verbose_name="Наименование")
+    name = models.CharField(max_length=150, unique=True, verbose_name="Наименование")
     post = models.ForeignKey('Post', on_delete=models.CASCADE, null=True, blank=True, related_name='list_technical_proposals')
     desig_document_list_technical_proposal = models.CharField(max_length=50, unique=True, verbose_name="Обозначение документа", default='1')
     info_format = models.CharField(max_length=20, choices=INFO_FORMAT_CHOICES, default='ДЭ', verbose_name="Формат представления информации")

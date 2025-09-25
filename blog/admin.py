@@ -4,6 +4,11 @@ from django.shortcuts import redirect, render
 from django.urls import path, reverse
 from django.utils import timezone
 from django.utils.html import format_html
+import re
+from django.db.models import Q
+from functools import reduce
+from operator import and_, or_
+
 
 from crm.models import (
     Call,
@@ -324,10 +329,12 @@ class AddReportTechnicalProposalAdmin(admin.ModelAdmin):
         'status',
         'version',
         'trl',
+        'priority',
         'author',
         'current_responsible',
         'date_of_creation',
         'date_of_change',
+        'uploaded_file_1',
     )
     list_filter = ('category', 'status', 'trl', 'date_of_creation')
     readonly_fields = ('date_of_change',)
@@ -343,6 +350,7 @@ class AddReportTechnicalProposalAdmin(admin.ModelAdmin):
                 'version_diff',
                 'litera',
                 'trl',
+                'priority',
                 'validity_date',
                 'subscribers',
                 'related_documents',
@@ -353,6 +361,7 @@ class AddReportTechnicalProposalAdmin(admin.ModelAdmin):
                 'current_responsible',
                 'date_of_creation',
                 'date_of_change',
+                'uploaded_file_1',
             )
         }),
     )
@@ -406,12 +415,32 @@ class RevenueRangeFilter(admin.SimpleListFilter):
         return queryset
 
 
+
+QUOTE_CHARS = '\"\'`«»“”„‟‹›‚‛’‘ˮ'  # набор «умных» и обычных кавычек
+
+def normalize_search(text: str) -> list[str]:
+    """
+    Удаляем кавычки/мусор и разбиваем на слова (кириллица/латиница/цифры).
+    Возвращаем список терминов без пустых.
+    """
+    if not text:
+        return []
+    # уберем кавычки
+    for ch in QUOTE_CHARS:
+        text = text.replace(ch, " ")
+    # вытащим «слова» (включая кириллицу и латиницу)
+    terms = re.findall(r"\w+", text, flags=re.UNICODE)
+    return [t for t in terms if t]
+    # всё приводим к нижнему через casefold
+    return [w.casefold() for w in re.findall(r"\w+", t, flags=re.UNICODE) if w]
+
+
 class CustomerAdmin(admin.ModelAdmin):
     list_display = ('name_of_company', 'revenue_for_last_year', 'length_of_electrical_network_km')
-    list_filter = ('name_of_company', 'revenue_for_last_year')  # Фильтры в правой части
-    list_filter = (RevenueRangeFilter,)
-    search_fields = ('name_of_company', 'address')  # Поиск по этим полям
-
+    # Объедини фильтры в один список
+    list_filter = ('name_of_company', 'revenue_for_last_year')  # + добавь кастомный если нужен: RevenueRangeFilter
+    # По каким полям можно искать клиентов (для автокомплита тоже важно)
+    search_fields = ('name_of_company', 'address')  # оставь только реально существующие
 
 class Decision_makerAdmin(admin.ModelAdmin):
     list_display = ('full_name', 'city_of_location', 'function', 'customer')
@@ -441,9 +470,67 @@ class Deal_stageAdmin(admin.ModelAdmin):
 @admin.register(Call)
 class CallAdmin(admin.ModelAdmin):
     list_display = ('customer', 'decision_maker', 'planned_date', 'responsible', 'deal')
-    search_fields = ('call_goal', 'call_result')
     list_filter = ('planned_date',)
     date_hierarchy = 'planned_date'
+    list_select_related = ('customer',)
+    autocomplete_fields = ('customer',)
+
+    # Отключаем стандартный механизм, чтобы полностью контролировать поведение
+    search_fields = ('id',)
+
+    # Список полей, по которым ищем (подставь свои реальные имена)
+    SEARCH_FIELDS = (
+        'customer__name_of_company',     # основной заголовок компании
+        'decision_maker__full_name',
+        'call_goal',
+        'call_result',
+    )
+
+    # для экономии запросов в changelist
+    list_select_related = ('customer', 'decision_maker')
+
+    def get_search_results(self, request, queryset, search_term):
+        """
+        Полный контроль поиска:
+        - разбиваем запрос на слова;
+        - каждое слово должно встречаться хотя бы в одном из SEARCH_FIELDS;
+        - регистр игнорируем (i* lookups);
+        - если введено число — добавляем точное совпадение по id.
+        """
+        # если пусто — отдадим стандартное поведение (ничего не фильтруем)
+        if not search_term:
+            return queryset, False
+
+        terms = [t for t in search_term.split() if t]
+        q_total = Q()
+
+        # каждое слово должно совпасть хотя бы по одному полю
+        for term in terms:
+            q_one_term = Q()
+            for raw_field in self.SEARCH_FIELDS:
+                # поддерживаем префиксы как в Django Admin
+                if raw_field.startswith('^'):
+                    field, lookup = raw_field[1:], '__istartswith'
+                elif raw_field.startswith('='):
+                    field, lookup = raw_field[1:], '__iexact'
+                elif raw_field.startswith('@'):
+                    # работает только на PostgreSQL + при наличии конфигурации FTS
+                    field, lookup = raw_field[1:], '__search'
+                else:
+                    field, lookup = raw_field, '__icontains'
+
+                q_one_term |= Q(**{f'{field}{lookup}': term})
+
+            q_total &= q_one_term
+
+        # точное совпадение по id, если введено число
+        if search_term.isdigit():
+            q_total |= Q(id=int(search_term))
+
+        qs = queryset.filter(q_total)
+
+        # distinct на случай джойнов с m2m/one-to-many
+        return qs.distinct(), True
 
 
 @admin.register(Letter)
@@ -466,8 +553,36 @@ class Company_branchAdmin(admin.ModelAdmin):
 class MeetingAdmin(admin.ModelAdmin):
     list_display = ('id', 'customer', 'decision_maker', 'responsible_user', 'planned_date')
     list_filter = ('planned_date', 'customer', 'decision_maker', 'responsible_user')
-    search_fields = ('goal_description', 'result_description')
     ordering = ('-planned_date',)
+
+    # Отключаем стандартный механизм, чтобы полностью контролировать поведение
+    search_fields = ('id',)
+
+    # Список полей, по которым ищем (подставь свои реальные имена)
+    SEARCH_FIELDS = (
+        'customer__name_of_company',     # основной заголовок компании
+        'decision_maker__full_name',
+    )
+
+    def get_search_results(self, request, queryset, search_term):
+        terms = normalize_search(search_term)
+
+        if not terms:
+            # Ничего не ввели (или остались только кавычки): стандартное поведение
+            return super().get_search_results(request, queryset, search_term)
+
+        # Для каждого слова строим OR по полям, затем AND между словами
+        per_term_q = []
+        for term in terms:
+            ors = [Q(**{f"{field}__icontains": term}) for field in self.SEARCH_FIELDS]
+            per_term_q.append(reduce(or_, ors))
+
+        final_q = reduce(and_, per_term_q)
+        qs = queryset.filter(final_q)
+
+        # DISTINCT может понадобиться при JOIN'ах (многие-ко-многим).
+        # Здесь FK, так что False, но вернём True «на всякий случай», это безопасно.
+        return qs, True
 
 
 admin.site.register(Customer, CustomerAdmin)

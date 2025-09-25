@@ -30,6 +30,14 @@ class Customer(models.Model):
     length_of_electrical_network_km = models.DecimalField(max_digits=8, decimal_places=2, blank=True, null=True, verbose_name='Длина сетей, км')
     quantity_of_technical_transformer_pcs = models.PositiveIntegerField(blank=True, null=True, verbose_name='Количество ТП, шт')
     address = models.TextField(blank=True, null=True, verbose_name='Адрес')
+    name_of_company_ci = models.CharField(
+        max_length=255, editable=False, db_index=True, default=""
+    )
+
+    def save(self, *args, **kwargs):
+        # Unicode case folding — лучше, чем .lower() для всех языков
+        self.name_of_company_ci = (self.name_of_company or "").casefold()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name_of_company
@@ -141,7 +149,7 @@ class Call(models.Model):
     responsible = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Ответственный')
     planned_date = models.DateField(blank=True, null=True, verbose_name='Плановая дата')
     call_goal = models.CharField(max_length=200, blank=True, null=True, verbose_name='Описание цели звонка')
-    call_result = models.CharField(max_length=200, blank=True, null=True, verbose_name='Описание результата')
+    call_result = models.TextField(blank=True, null=True, verbose_name='Описание результата')
     deal = models.ForeignKey(Deal, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Сделка (если есть)')
 
     def __str__(self):
