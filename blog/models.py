@@ -826,7 +826,7 @@ class ElectronicModelPartProduct(models.Model):
 class AddReportTechnicalProposal(models.Model):
     category = models.CharField(max_length=50, default="ПЗ ПТ. Приложение", verbose_name="Категория")
 
-    name = models.CharField(max_length=100, unique=True, verbose_name="Наименование")
+    name = models.CharField(max_length=100, verbose_name="Наименование")
 
     INFO_FORMAT_CHOICES = [
         ("ДБ", "ДБ"),
