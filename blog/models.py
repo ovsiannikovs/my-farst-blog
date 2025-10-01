@@ -3,7 +3,9 @@ from django.utils import timezone
 from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
 from django.conf import settings
-from django.utils.text import Truncator
+from django.db import transaction
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 
 User = settings.AUTH_USER_MODEL
 User = get_user_model()
@@ -184,7 +186,7 @@ class GeneralDrawingProduct(models.Model):
     validity_date = models.DateField(null=True, blank=True, verbose_name="Срок действия")
     subscribers = models.CharField(max_length=200, blank=True, default='', verbose_name="Внешние и внутренние получатели")
     related_documents = models.TextField(max_length=1000,blank=True,default='',verbose_name="Связанные сопроводительные документы")
-    pattern = models.CharField(max_length=50, blank=True, default='ВО ПТ', verbose_name="Шаблон")
+    pattern = models.FileField(upload_to='uploads/', blank = True,null=True, verbose_name="Шаблон")
     develop_org = models.CharField(max_length=100, blank=True, default='ООО "СИСТЕМА"', verbose_name="Организация-разработчик")
     language = models.CharField(max_length=10, blank=True, default='rus', verbose_name="Язык")
     uploaded_file = models.FileField(upload_to='uploads/', blank = True, verbose_name="Загружаемый файл")
@@ -217,6 +219,10 @@ class ElectronicModelProduct(models.Model):
         ('Средний', 'Средний'),
         ('Низкий', 'Низкий'),
     ]
+    INFO_FORMAT_CHOICES = [
+        ('ДЭ', 'ДЭ'),
+        ('ДБ', 'ДБ'),
+    ]
 
     TRL_CHOICES = [
         ('1', '1'), ('2-', '2-'), ('2', '2'), ('3-', '3-'), ('3', '3'),
@@ -225,7 +231,7 @@ class ElectronicModelProduct(models.Model):
     category = models.CharField(max_length=50, default='ЭМИ', verbose_name="Категория")
     name = models.CharField(max_length=100, default='ПАК СПМ 2.13 Электронная модель изделия', verbose_name="Наименование")
     desig_document_electronic_model_product = models.CharField(max_length=50, unique=True, verbose_name="Обозначение документа", default='1')
-    info_format = models.CharField(max_length=20, default='ДЭ', verbose_name="Формат представления информации")
+    info_format = models.CharField(max_length=20, choices= INFO_FORMAT_CHOICES, verbose_name="Формат представления информации")
     primary_use = models.CharField(max_length=100, default='СИ.40522001.000.13ВПТ', verbose_name="Первичное применение")
     change_number = models.CharField(max_length=20, default='Без изм.', verbose_name="Номер изменения")
     author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='electronicmodel_author', verbose_name="Автор")
@@ -242,7 +248,7 @@ class ElectronicModelProduct(models.Model):
     validity_date = models.DateField(null=True, blank=True, verbose_name="Срок действия")
     subscribers = models.TextField(blank=True, default='', verbose_name="Внешние и внутренние получатели")
     related_docs = models.TextField(blank=True, default='', verbose_name='Связанные сопроводительные документы')
-    pattern = models.CharField(max_length=50, blank=True, default='ЭМИ ПТ', verbose_name="Шаблон")
+    pattern = models.FileField(upload_to='uploads/', blank = True, null=True, verbose_name="Шаблон")
     develop_org = models.CharField(max_length=100, default='ООО "СИСТЕМА"', verbose_name="Организация-разработчик")
     language = models.CharField(max_length=10, default='rus', verbose_name="Язык")
 
@@ -301,7 +307,7 @@ class GeneralElectricalDiagram(models.Model):
     validity_date = models.DateField(null=True, blank=True, verbose_name="Срок действия")
     subscribers = models.CharField(max_length=200, blank=True, default='', verbose_name="Внешние и внутренние получатели")
     related_documents = models.TextField(blank=True, default='', verbose_name='Связанные сопроводительные документы')
-    pattern = models.CharField(max_length=50, blank=True, default='Э6 ПТ', verbose_name="Шаблон")
+    pattern = models.FileField(upload_to='uploads/', blank = True, null=True, verbose_name="Шаблон")
     develop_org = models.CharField(max_length=100, default='ООО "СИСТЕМА"', verbose_name="Организация-разработчик")
     language = models.CharField(max_length=10, default='rus', verbose_name="Язык")
     uploaded_file = models.FileField(upload_to='uploads/', blank = True, verbose_name="Загружаемый файл")
@@ -334,8 +340,10 @@ class SoftwareProduct(models.Model):
     ]
     category = models.CharField(max_length=50, default='ПО ПТ', verbose_name="Категория")
     name = models.CharField(max_length=100, default='ПАК СПМ 2.13  Программное обеспечение. Техническое предложение', verbose_name="Наименование")
-    desig_document_software_product = models.CharField(max_length=50, verbose_name="Обозначение документа", default='1')
+    desig_document_software_product = models.CharField(max_length=50, unique=True, verbose_name="Обозначение документа", default='1')
     info_format = models.CharField(max_length=30, default='ДЭ', verbose_name="Формат представления информации")
+    primary_use = models.CharField(max_length=100, default='СИ.40522001.000.13ВПТ', verbose_name="Первичное применение")
+    change_number = models.CharField(max_length=20, default='без изм.', verbose_name="Номер изменения")
     author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Автор")
     date_of_creation = models.DateTimeField(default=timezone.now, verbose_name="Дата и время создания")
     last_editor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Последний редактор")
@@ -345,10 +353,12 @@ class SoftwareProduct(models.Model):
     priority = models.CharField(max_length=30, blank=True, choices=PRIORITY_CHOICES, verbose_name="Приоритет в работе")
     version = models.CharField(max_length=6, default='1', verbose_name="Версия")
     version_diff = models.TextField(blank=True, default='Стартовая версия', verbose_name="Сравнение версий")
+    litera = models.CharField(max_length=2, default='П-', verbose_name="Стадия разработки  (Литера)")
+    trl = models.CharField(max_length=10, default='1-', verbose_name="Уровень готовности технологий (TRL)")
     validity_date = models.DateField(null=True, blank=True, verbose_name="Срок действия")
     subscribers = models.CharField(max_length=200, blank=True, default='', verbose_name="Внешние и внутренние получатели")
     related_documents = models.TextField(blank=True, default='', verbose_name='Связанные сопроводительные документы')
-    pattern = models.CharField(max_length=50, blank=True, default='Э6 ПТ', verbose_name="Шаблон")
+    pattern = models.FileField(upload_to='uploads/', blank = True, null=True, verbose_name="Шаблон")
     develop_org = models.CharField(max_length=100, default='ООО "СИСТЕМА"', verbose_name="Организация-разработчик")
     language = models.CharField(max_length=10, default='rus', verbose_name="Язык")
     uploaded_file = models.FileField(upload_to='uploads/', blank = True, verbose_name="Загружаемый файл")
@@ -395,7 +405,7 @@ class ReportTechnicalProposal(models.Model):
     validity_date = models.DateField(null=True, blank=True, verbose_name="Срок действия")
     subscribers = models.CharField(max_length=200, blank=True, default='', verbose_name="Внешние и внутренние получатели")
     related_documents = models.TextField(blank=True, default='', verbose_name='Связанные сопроводительные документы')
-    pattern = models.CharField(max_length=50, blank=True, default='Э6 ПТ', verbose_name="Шаблон")
+    pattern = models.FileField(upload_to='uploads/', blank = True, null=True, verbose_name="Шаблон")
     develop_org = models.CharField(max_length=100, default='ООО "СИСТЕМА"', verbose_name="Организация-разработчик")
     language = models.CharField(max_length=10, default='rus', verbose_name="Язык")
     uploaded_file = models.FileField(upload_to='uploads/', blank = True, null=True, verbose_name="Загружаемый файл")
@@ -422,29 +432,50 @@ class ReportTechnicalProposal(models.Model):
 
 
 class ProtocolTechnicalProposal(models.Model):
-    id = models.BigAutoField(primary_key=True, unique=True)
+
+    INFO_FORMAT_CHOICES = [
+        ("ДБ", "ДБ"),
+        ("ДЭ", "ДЭ"),
+    ]
+
+    STATUS_CHOICES = [
+        ('Зарегистрирован', 'Зарегистрирован'),
+        ('В разработке', 'В разработке'),
+        ('На проверке', 'На проверке'),
+        ('На утверждении', 'На утверждении'),
+        ('Выпущен', 'Выпущен'),
+        ('Заменен', 'Заменен'),
+        ('Аннулирован', 'Аннулирован'),
+        ('В архиве',  'В архиве')
+        ]
+
+    PRIORITY_CHOICES = [
+        ('Срочно', 'Срочно'),
+        ('Высокий', 'Высокий'),
+        ('Средний', 'Средний'),
+        ('Низкий', 'Низкий'),
+    ]
 
     category = models.CharField(
         max_length=100,
         default="Протокол ПТ",
         verbose_name="Категория"
     )
-    name = models.CharField(max_length=100, verbose_name="Наименование")
-    desig_document_protocol_technical_proporsal = models.CharField(max_length=50, blank=True, null=True, unique=True, verbose_name="Обозначение изделия")
-    info_format = models.CharField(max_length=20, default="ДЭ", blank=True, verbose_name="Формат представления информации")
+    name = models.CharField(max_length=100, unique=True, verbose_name="Наименование")
+    info_format = models.CharField(max_length=10, choices=INFO_FORMAT_CHOICES, default="ДЭ", blank=True, verbose_name="Формат представления информации")
     author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Автор")
     date_of_creation = models.DateTimeField(default=timezone.now, verbose_name="Дата и время создания")
     last_editor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Последний редактор")
     date_of_change = models.DateTimeField(auto_now=True, verbose_name="Дата и время последнего изменения")
     current_responsible = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Текущий ответственный")
-    status = models.CharField(max_length=30, default='Зарегистрирован', verbose_name="Статус (состояние)")
-    priority = models.CharField(max_length=30, blank=True, default='', verbose_name="Приоритет в работе")
+    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='Зарегистрирован', verbose_name="Статус (состояние)")
+    priority = models.CharField(max_length=30, blank=True, choices=PRIORITY_CHOICES, verbose_name="Приоритет в работе")
     version = models.CharField(max_length=6, default='1', verbose_name="Версия")
     version_diff = models.TextField(blank=True, default='Стартовая версия', verbose_name="Сравнение версий")
     validity_date = models.DateField(null=True, blank=True, verbose_name="Срок действия")
     subscribers = models.CharField(max_length=200, blank=True, default='', verbose_name="Внешние и внутренние получатели")
     related_documents = models.TextField(blank=True, default='', verbose_name='Связанные сопроводительные документы')
-    pattern = models.CharField(max_length=50, blank=True, default='Э6 ПТ', verbose_name="Шаблон")
+    pattern = models.FileField(upload_to='uploads/', blank = True, null=True, verbose_name="Шаблон")
     develop_org = models.CharField(max_length=100, default='ООО "СИСТЕМА"', verbose_name="Организация-разработчик")
     language = models.CharField(max_length=10, default='rus', verbose_name="Язык")
     uploaded_file = models.FileField(upload_to='uploads/', blank = True, verbose_name="Загружаемый файл")
@@ -484,7 +515,7 @@ class GeneralDrawingUnit(models.Model):
 
     category = models.CharField(max_length=50, default='ВО СЕ', verbose_name="Категория")
     name = models.CharField(max_length=100, verbose_name="Наименование")
-    desig_document_general_drawing_unit = models.CharField(max_length=50, unique=True, null=True, verbose_name="Обозначение изделия")
+    desig_document_general_drawing_unit = models.CharField(max_length=50, unique=True, blank= False, null= False,verbose_name="Обозначение документа")
     info_format = models.CharField(max_length=20, choices=INFO_FORMAT_CHOICES, default='ДЭ', verbose_name="Формат представления информации")
     primary_use = models.CharField(max_length=100, default='СИ.40522001.000.13ВПТ', verbose_name="Первичное применение")
     change_number = models.CharField(max_length=20, default='без изм.', verbose_name="Номер изменения")
@@ -502,7 +533,7 @@ class GeneralDrawingUnit(models.Model):
     validity_date = models.DateField(null=True, blank=True, verbose_name="Срок действия")
     subscribers = models.CharField(max_length=200, blank=True, default='', verbose_name="Внешние и внутренние получатели")
     related_documents = models.TextField(blank=True, default='', verbose_name='Связанные сопроводительные документы')
-    pattern = models.CharField(max_length=50, blank=True, default='Э6 ПТ', verbose_name="Шаблон")
+    pattern = models.FileField(upload_to='uploads/', blank = True, null=True, verbose_name="Шаблон")
     develop_org = models.CharField(max_length=100, default='ООО "СИСТЕМА"', verbose_name="Организация-разработчик")
     language = models.CharField(max_length=10, default='rus', verbose_name="Язык")
     uploaded_file = models.FileField(upload_to='uploads/', blank = True, verbose_name="Загружаемый файл")
@@ -517,28 +548,19 @@ class GeneralDrawingUnit(models.Model):
 
 class ElectronicModelUnit(models.Model):
     INFO_FORMAT_CHOICES = [
-        ('ДЭ КД', 'Электронный конструкторский документ'),
-        ('ДЭ', 'Электронный документ'),
+        ('ДБ', 'ДБ'),
+        ('ДЭ', 'ДЭ'),
     ]
     STATUS_CHOICES = [
         ('Зарегистрирован', 'Зарегистрирован'),
-        ('Рабочий вариант', 'Рабочий вариант'),
-        ('Разработка', 'Разработка'),
-        ('Проверка', 'Проверка'),
-        ('Проверен', 'Проверен'),
-        ('На согласовании', 'На согласовании'),
-        ('Согласован', 'Согласован'),
+        ('В разработке', 'В разработке'),
+        ('На проверке', 'На проверке'),
         ('На утверждении', 'На утверждении'),
-        ('Утвержден', 'Утвержден'),
-        ('Отклонен', 'Отклонен'),
         ('Выпущен', 'Выпущен'),
-        ('Заморожен', 'Заморожен'),
         ('Заменен', 'Заменен'),
-        ('Заблокирован', 'Заблокирован'),
         ('Аннулирован', 'Аннулирован'),
-        ('На пересмотре', 'На пересмотре'),
-        ('Архив', 'Архив'),
-    ]
+        ('В архиве',  'В архиве')
+        ]
     PRIORITY_CHOICES = [
         ('Срочно', 'Срочно'),
         ('Высокий', 'Высокий'),
@@ -551,7 +573,7 @@ class ElectronicModelUnit(models.Model):
 
     category = models.CharField(max_length=50, default='ЭМ СЕ', verbose_name="Категория")
     name = models.CharField(max_length=100, default='Узел 1 Электронная модель сборочной единицы', verbose_name="Наименование")
-    desig_document_electronic_model_unit = models.CharField(max_length=50, unique=True, verbose_name="Обозначение изделия", default='1')
+    desig_document_electronic_model_unit = models.CharField(max_length=50, unique=True, verbose_name="Обозначение документа")
     info_format = models.CharField(max_length=20, choices=INFO_FORMAT_CHOICES, default='ДЭ', verbose_name="Формат представления информации")
     primary_use = models.CharField(max_length=100, default='СИ.40522001.000.13ВПТ', verbose_name="Первичное применение")
     change_number = models.CharField(max_length=20, default='Изм. 1', verbose_name="Номер изменения")
@@ -569,7 +591,7 @@ class ElectronicModelUnit(models.Model):
     validity_date = models.DateField(null=True, blank=True, verbose_name="Срок действия")
     subscribers = models.CharField(max_length=200, blank=True, default='', verbose_name="Внешние и внутренние получатели")
     related_documents = models.TextField(blank=True, default='', verbose_name='Связанные сопроводительные документы')
-    pattern = models.CharField(max_length=50, blank=True, default='Э6 ПТ', verbose_name="Шаблон")
+    pattern = models.FileField(upload_to='uploads/', blank = True, null=True, verbose_name="Шаблон")
     develop_org = models.CharField(max_length=100, default='ООО "СИСТЕМА"', verbose_name="Организация-разработчик")
     language = models.CharField(max_length=10, default='rus', verbose_name="Язык")
     uploaded_file = models.FileField(upload_to='uploads/', blank = True, verbose_name="Загружаемый файл")
@@ -595,23 +617,14 @@ class DrawingPartUnit(models.Model):
     ]
     STATUS_CHOICES = [
         ('Зарегистрирован', 'Зарегистрирован'),
-        ('Рабочий вариант', 'Рабочий вариант'),
-        ('Разработка', 'Разработка'),
-        ('Проверка', 'Проверка'),
-        ('Проверен', 'Проверен'),
-        ('На согласовании', 'На согласовании'),
-        ('Согласован', 'Согласован'),
+        ('В разработке', 'В разработке'),
+        ('На проверке', 'На проверке'),
         ('На утверждении', 'На утверждении'),
-        ('Утвержден', 'Утвержден'),
-        ('Отклонен', 'Отклонен'),
         ('Выпущен', 'Выпущен'),
-        ('Заморожен', 'Заморожен'),
         ('Заменен', 'Заменен'),
-        ('Заблокирован', 'Заблокирован'),
         ('Аннулирован', 'Аннулирован'),
-        ('На пересмотре', 'На пересмотре'),
-        ('Архив', 'Архив'),
-    ]
+        ('В архиве',  'В архиве')
+        ]
 
     category = models.CharField(max_length=20, default='ЧД СЕ', verbose_name="Категория")
     name = models.CharField(max_length=100, verbose_name="Наименование")
@@ -633,7 +646,7 @@ class DrawingPartUnit(models.Model):
     validity_date = models.DateField(null=True, blank=True, verbose_name="Срок действия")
     subscribers = models.CharField(max_length=200, blank=True, default='', verbose_name="Внешние и внутренние получатели")
     related_documents = models.TextField(blank=True, default='', verbose_name='Связанные сопроводительные документы')
-    pattern = models.CharField(max_length=50, blank=True, default='Э6 ПТ', verbose_name="Шаблон")
+    pattern = models.FileField(upload_to='uploads/', blank = True, null=True, verbose_name="Шаблон")
     develop_org = models.CharField(max_length=100, default='ООО "СИСТЕМА"', verbose_name="Организация-разработчик")
     language = models.CharField(max_length=10, default='rus', verbose_name="Язык")
     uploaded_file = models.FileField(upload_to='uploads/', blank = True, verbose_name="Загружаемый файл")
@@ -665,10 +678,15 @@ class ElectronicModelPartUnit(models.Model):
         ('Низкий', 'Низкий'),
     ]
 
+    INFO_FORMAT_CHOICES = [
+        ('ДБ', 'ДБ'),
+        ('ДЭ', 'ДЭ'),
+    ]
+
     category = models.CharField(default='ЭМД СЕ', max_length=100, verbose_name="Категория")
     name = models.CharField(max_length=100, verbose_name="Наименование")
-    desig_document_electronic_model_part_unit = models.CharField(max_length=50, unique=True, verbose_name="Обозначение изделия", default='1')
-    info_format = models.CharField(max_length=50, default='ДЭ', verbose_name="Формат представления информации")
+    desig_document_electronic_model_part_unit = models.CharField(max_length=50, unique=True, verbose_name="Обозначение документа", default='1')
+    info_format = models.CharField(max_length=50, choices= INFO_FORMAT_CHOICES, verbose_name="Формат представления информации")
     primary_use = models.CharField(max_length=100, default='СИ.40522001.000.13ВПТ', verbose_name="Первичное применение")
     change_number = models.CharField(max_length=20, default='без изм.', verbose_name="Номер изменения")
     author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Автор")
@@ -685,7 +703,7 @@ class ElectronicModelPartUnit(models.Model):
     validity_date = models.DateField(null=True, blank=True, verbose_name="Срок действия")
     subscribers = models.CharField(max_length=200, blank=True, default='', verbose_name="Внешние и внутренние получатели")
     related_documents = models.TextField(blank=True, default='', verbose_name='Связанные сопроводительные документы')
-    pattern = models.CharField(max_length=50, blank=True, default='Э6 ПТ', verbose_name="Шаблон")
+    pattern = models.FileField(upload_to='uploads/', blank = True, null=True, verbose_name="Шаблон")
     develop_org = models.CharField(max_length=100, default='ООО "СИСТЕМА"', verbose_name="Организация-разработчик")
     language = models.CharField(max_length=10, default='rus', verbose_name="Язык")
     uploaded_file = models.FileField(upload_to='uploads/', blank = True, verbose_name="Загружаемый файл")
@@ -705,23 +723,14 @@ class DrawingPartProduct(models.Model):
     ]
     STATUS_CHOICES = [
         ('Зарегистрирован', 'Зарегистрирован'),
-        ('Рабочий вариант', 'Рабочий вариант'),
-        ('Разработка', 'Разработка'),
-        ('Проверка', 'Проверка'),
-        ('Проверен', 'Проверен'),
-        ('На согласовании', 'На согласовании'),
-        ('Согласован', 'Согласован'),
+        ('В разработке', 'В разработке'),
+        ('На проверке', 'На проверке'),
         ('На утверждении', 'На утверждении'),
-        ('Утвержден', 'Утвержден'),
-        ('Отклонен', 'Отклонен'),
         ('Выпущен', 'Выпущен'),
-        ('Заморожен', 'Заморожен'),
         ('Заменен', 'Заменен'),
-        ('Заблокирован', 'Заблокирован'),
         ('Аннулирован', 'Аннулирован'),
-        ('На пересмотре', 'На пересмотре'),
-        ('Архив', 'Архив'),
-    ]
+        ('В архиве',  'В архиве')
+        ]
     PRIORITY_CHOICES = [
         ("Срочно", "Срочно"),
         ("Высокий", "Высокий"),
@@ -739,8 +748,8 @@ class DrawingPartProduct(models.Model):
     ]
 
     category = models.CharField(max_length=50, default="ЧД ВО", verbose_name="Категория")
-    name = models.CharField(max_length=100, verbose_name="Наименование")
-    desig_document_drawing_part_product = models.CharField(max_length=50, unique=True, verbose_name="Обозначение изделия", default='1')
+    name = models.CharField(max_length=100, unique=True, verbose_name="Наименование")
+    desig_document_drawing_part_product = models.CharField(max_length=50, unique=True, verbose_name="Обозначение документа", default='1')
     info_format = models.CharField(max_length=10, choices=INFO_FORMAT_CHOICES, default="ДЭ", verbose_name="Формат представления информации")
     primary_use = models.CharField(max_length=100, default='СИ.40522001.000.13ВПТ', verbose_name="Первичное применение")
     change_number = models.CharField(max_length=20, default='Без изм.', verbose_name="Номер изменения")
@@ -758,7 +767,7 @@ class DrawingPartProduct(models.Model):
     validity_date = models.DateField(null=True, blank=True, verbose_name="Срок действия")
     subscribers = models.CharField(max_length=200, blank=True, default='', verbose_name="Внешние и внутренние получатели")
     related_documents = models.TextField(blank=True, default='', verbose_name='Связанные сопроводительные документы')
-    pattern = models.CharField(max_length=50, blank=True, default='Э6 ПТ', verbose_name="Шаблон")
+    pattern = models.FileField(upload_to='uploads/', blank = True, null=True, verbose_name="Шаблон")
     develop_org = models.CharField(max_length=100, default='ООО "СИСТЕМА"', verbose_name="Организация-разработчик")
     language = models.CharField(max_length=10, default='rus', verbose_name="Язык")
     uploaded_file = models.FileField(upload_to='uploads/', blank = True, verbose_name="Загружаемый файл")
@@ -789,11 +798,15 @@ class ElectronicModelPartProduct(models.Model):
         ('Средний', 'Средний'),
         ('Низкий', 'Низкий'),
     ]
+    INFO_FORMAT_CHOICES = [
+        ("ДЭ", "ДЭ"),
+        ("ДБ", "ДБ"),
+    ]
 
     category = models.CharField(max_length=50, default="ЭМД ВО", verbose_name="Категория")
     name = models.CharField(max_length=100, verbose_name="Наименование")
-    desig_document_electronic_model_part_product = models.CharField(max_length=50, unique=True, verbose_name="Обозначение изделия", default='1')
-    info_format = models.CharField(max_length=20, default="ДЭ", blank=True, verbose_name="Формат представления информации")
+    desig_document_electronic_model_part_product = models.CharField(max_length=50, unique=True, verbose_name="Обозначение документа", default='1')
+    info_format = models.CharField(max_length=20, choices= INFO_FORMAT_CHOICES, verbose_name="Формат представления информации")
     primary_use = models.CharField(max_length=100, default='СИ.40522001.000.13ВПТ', verbose_name="Первичное применение")
     change_number = models.CharField(max_length=20, default='без изм.', verbose_name="Номер изменения")
     author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', verbose_name="Автор")
@@ -810,7 +823,7 @@ class ElectronicModelPartProduct(models.Model):
     validity_date = models.DateField(null=True, blank=True, verbose_name="Срок действия")
     subscribers = models.CharField(max_length=200, blank=True, default='', verbose_name="Внешние и внутренние получатели")
     related_documents = models.TextField(blank=True, default='', verbose_name='Связанные сопроводительные документы')
-    pattern = models.CharField(max_length=50, blank=True, default='Э6 ПТ', verbose_name="Шаблон")
+    pattern = models.FileField(upload_to='uploads/', blank = True, null=True, verbose_name="Шаблон")
     develop_org = models.CharField(max_length=100, default='ООО "СИСТЕМА"', verbose_name="Организация-разработчик")
     language = models.CharField(max_length=10, default='rus', verbose_name="Язык")
     uploaded_file = models.FileField(upload_to='uploads/', blank = True, verbose_name="Загружаемый файл")
@@ -862,15 +875,15 @@ class AddReportTechnicalProposal(models.Model):
 
     version = models.CharField(max_length=6, default='1', verbose_name="Версия")
     version_diff = models.TextField(blank=True, default='Стартовая версия', verbose_name="Сравнение версий")
-    litera = models.CharField(max_length=2, default='П-', verbose_name="Стадия разработки  (Литера)")
-    trl = models.CharField(max_length=10, default='1-', verbose_name="Уровень готовности технологий (TRL)")
+    #litera = models.CharField(max_length=2, default='П-', verbose_name="Стадия разработки  (Литера)")
+    #trl = models.CharField(max_length=10, default='1-', verbose_name="Уровень готовности технологий (TRL)")
     priority = models.CharField(max_length=30, blank=True, choices=PRIORITY_CHOICES, verbose_name="Приоритет в работе")
 
     validity_date = models.DateField(null=True, blank=True, verbose_name="Срок действия")
     subscribers = models.CharField(max_length=200, blank=True, default='', verbose_name="Внешние и внутренние получатели")
     related_documents = models.TextField(blank=True, default='', verbose_name='Связанные сопроводительные документы')
     develop_org = models.CharField(max_length=100, default='ООО "СИСТЕМА"', verbose_name="Организация-разработчик")
-    uploaded_file_1 = models.FileField(upload_to='uploads/', blank = True, verbose_name="Загружаемый файл")
+    #uploaded_file_1 = models.FileField(upload_to='uploads/', blank = True, verbose_name="Загружаемый файл")
 
     LANGUAGE_CHOICES = [
         ('rus', 'rus'),
@@ -930,7 +943,7 @@ class ListTechnicalProposal(models.Model):
     validity_date = models.DateField(null=True, blank=True, verbose_name="Срок действия")
     subscribers = models.CharField(max_length=200, blank=True, default='', verbose_name="Внешние и внутренние получатели")
     related_documents = models.TextField(blank=True, default='', verbose_name='Связанные сопроводительные документы')
-    pattern = models.CharField(max_length=50, blank=True, default='Э6 ПТ', verbose_name="Шаблон")
+    pattern = models.FileField(upload_to='uploads/', blank = True, null=True, verbose_name="Шаблон")
     develop_org = models.CharField(max_length=100, default='ООО "СИСТЕМА"', verbose_name="Организация-разработчик")
     language = models.CharField(max_length=10, default='rus', verbose_name="Язык")
     uploaded_file = models.FileField(upload_to='uploads/', blank = True, verbose_name="Загружаемый файл")
@@ -1031,7 +1044,7 @@ class TaskForDesignWork(models.Model):
     validity_date = models.DateField(blank=True, null=True, verbose_name="срок действия")
     subscribers = models.TextField(blank=True, null=True, verbose_name="внешние и внутренние получатели")
     related_documents = models.TextField(blank=True, null=True, verbose_name="связанные сопроводительные документы")
-    pattern = models.CharField(max_length=100, blank=True, null=True, verbose_name="шаблон")
+    pattern = models.FileField(upload_to='uploads/', blank = True, null=True, verbose_name="Шаблон")
     develop_org = models.CharField(max_length=100, blank=True, null=True, verbose_name="организация - разработчик")
     language = models.CharField(max_length=7, blank=True, null=True, verbose_name="язык")
     uploaded_file = models.FileField(upload_to='design_tasks/', blank=True, null=True, verbose_name="загружаемый файл")
@@ -1086,7 +1099,7 @@ class RevisionTask(models.Model):
     validity_date = models.DateField(blank=True, null=True, verbose_name="срок действия")
     subscribers = models.TextField(blank=True, null=True, verbose_name="внешние и внутренние получатели")
     related_documents = models.TextField(blank=True, null=True, verbose_name="связанный сопроводительные документы")
-    pattern = models.CharField(max_length=100, blank=True, null=True, verbose_name="шаблон")
+    pattern = models.FileField(upload_to='uploads/', blank = True, null=True, verbose_name="Шаблон")
     develop_org = models.CharField(max_length=100, blank=True, null=True, verbose_name="организация - разработчик")
     language = models.CharField(max_length=7, blank=True, null=True, verbose_name="язык")
     uploaded_file = models.FileField(upload_to='revision_tasks/', blank=True, null=True, verbose_name="файл")
@@ -1166,7 +1179,7 @@ class WorkAssignment(models.Model):
     time_window_start = models.DateField("Временное окно: с", null=True, blank=True)
     time_window_end = models.DateField("Временное окно: по", null=True, blank=True)
     conditional_deadline = models.CharField("Условный дедлайн", max_length=1000, blank=True)
-    uploaded_file = models.FileField(upload_to='uploads/', blank = True, verbose_name="Приложение к РЗ")
+    #uploaded_file = models.FileField(upload_to='uploads/', blank = True, verbose_name="Приложение к РЗ")
 
     control_status = models.CharField(
         "Контроль срока — статус",
@@ -1576,18 +1589,9 @@ class RouteProcess(models.Model):
         return f"{self.route} → {self.process} ({self.order})"
 
 class Attachment(models.Model):
-    work = models.ForeignKey(
-        WorkAssignment, null=True,
-        blank=True,
-        on_delete=models.CASCADE,
-        related_name='attachments'
-    )
-    file = models.FileField(upload_to='work_attachments/%Y/%m/%d/')
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE, blank=True, null=True)
+    object_id    = models.PositiveIntegerField(blank=True, null=True)
+    content_object = GenericForeignKey("content_type", "object_id")
 
-    class Meta:
-        verbose_name = 'Вложение'
-        verbose_name_plural = 'Вложения'
-
-    def __str__(self):
-        return self.file.name
+    file = models.FileField(upload_to="attachments/")
 
