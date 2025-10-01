@@ -5,9 +5,13 @@ from django.urls import path, reverse
 from django.utils import timezone
 from django.utils.html import format_html
 import re
-from django.db.models import Q
+from django.db.models import Q, F, Value, TextField
 from functools import reduce
 from operator import and_, or_
+from django.forms.models import BaseInlineFormSet
+from django.forms import ValidationError
+from django.contrib.contenttypes.admin import GenericTabularInline
+from django.contrib.contenttypes.forms import BaseGenericInlineFormSet
 
 
 from crm.models import (
@@ -65,12 +69,40 @@ from .models import (
 )
 from .services import WorkAssignmentService
 
+class RequiredFileGenericFormSet(BaseGenericInlineFormSet):
+    parent_status_field = "status"
+    required_status_labels = ("Зарегистрирован",)
+    attachment_file_field = "file"
 
+    def _required_values(self):
+        field = self.instance._meta.get_field(self.parent_status_field)
+        choices = getattr(field, "choices", ()) or ()
+        labels = {s.strip().lower() for s in self.required_status_labels}
+        return {v for v, lbl in choices if str(lbl).strip().lower() in labels}
 
-class AttachmentInline(admin.TabularInline):
+    def clean(self):
+        super().clean()
+        status = getattr(self.instance, self.parent_status_field, None) or self.data.get(self.parent_status_field)
+        need = False
+        if status is not None:
+            need = status in self._required_values() or str(status).strip().lower() in {
+                s.strip().lower() for s in self.required_status_labels
+            }
+        if not need:
+            return
+        ffield = self.attachment_file_field
+        for form in self.forms:
+            if getattr(form, "cleaned_data", None) and not form.cleaned_data.get("DELETE"):
+                f = form.cleaned_data.get(ffield) or getattr(form.instance, ffield, None)
+                if f:
+                    return
+        raise ValidationError("При статусе «Зарегистрирован» добавьте хотя бы один файл.")
+
+class AttachmentInline(GenericTabularInline):
     model = Attachment
-    extra = 1  # сколько пустых строк показывать
-    fields = ('file',)
+    formset = RequiredFileGenericFormSet   # ваш общий formset
+    extra = 1
+    fields = ("file",)
 
 @admin.register(TechnicalProposal)
 class TechnicalProposalAdmin(admin.ModelAdmin):
@@ -161,7 +193,7 @@ class ElectronicModelProductAdmin(admin.ModelAdmin):
     )
     search_fields = ('name', 'desig_document_electronic_model_product')
     list_filter = ('status', 'trl', 'category', 'develop_org')
-    readonly_fields = ('date_of_change', 'info_format')
+    readonly_fields = ('date_of_change',)
 
 @admin.register(GeneralElectricalDiagram)
 class GeneralElectricalDiagramAdmin(admin.ModelAdmin):
@@ -174,9 +206,9 @@ class GeneralElectricalDiagramAdmin(admin.ModelAdmin):
 
 @admin.register(SoftwareProduct)
 class SoftwareProductAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'category', 'desig_document_software_product', 'status', 'version', 'date_of_creation')
+    list_display = ('name', 'category', 'desig_document_software_product', 'status', 'version', 'date_of_creation')
     search_fields = ('name', 'desig_document_software_product', 'status')
-    list_filter = ('status', 'category', 'version')
+    list_filter = ('status', 'trl', 'category', 'version')
     readonly_fields = ('date_of_change',)
 
 @admin.register(GeneralDrawingUnit)
@@ -192,9 +224,9 @@ class ElectronicModelUnitAdmin(admin.ModelAdmin):
 @admin.register(DrawingPartUnit)
 class DrawingPartUnitAdmin(admin.ModelAdmin):
     list_display = (
-        'id',
         'name',
         'category',
+        'desig_document_drawing_part_unit',
         'status',
         'version',
         'date_of_creation',
@@ -203,13 +235,14 @@ class DrawingPartUnitAdmin(admin.ModelAdmin):
     )
     list_filter = ('status', 'category', 'trl', 'develop_org')
     search_fields = ('name', 'author__username', 'last_editor__username')
+    inlines = [AttachmentInline]
     ordering = ('-date_of_creation',)
     readonly_fields = ('date_of_change',)
 
     fieldsets = (
         (None, {
             'fields': (
-                'name', 'category',
+                'name', 'category', 'desig_document_drawing_part_unit',
                 'info_format', 'primary_use', 'change_number'
             )
         }),
@@ -234,7 +267,6 @@ class DrawingPartUnitAdmin(admin.ModelAdmin):
 @admin.register(ElectronicModelPartUnit)
 class ElectronicModelPartUnitAdmin(admin.ModelAdmin):
     list_display = (
-        'id',
         'name',
         'desig_document_electronic_model_part_unit',
         'category',
@@ -245,8 +277,9 @@ class ElectronicModelPartUnitAdmin(admin.ModelAdmin):
         'last_editor',
     )
     search_fields = ('name', 'desig_document_electronic_model_part_unit', 'category')
+    inlines = [AttachmentInline]
     list_filter = ('status', 'trl', 'category', 'develop_org')
-    readonly_fields = ('date_of_change', 'info_format')
+    readonly_fields = ('date_of_change',)
 
     fieldsets = (
         (None, {
@@ -272,9 +305,8 @@ class ElectronicModelPartUnitAdmin(admin.ModelAdmin):
 @admin.register(DrawingPartProduct)
 class DrawingPartProductAdmin(admin.ModelAdmin):
     list_display = (
-        'id',
-        'desig_document_drawing_part_product',
         'name',
+        'desig_document_drawing_part_product',
         'category',
         'status',
         'version',
@@ -297,13 +329,13 @@ class DrawingPartProductAdmin(admin.ModelAdmin):
 @admin.register(ElectronicModelPartProduct)
 class ElectronicModelPartProductAdmin(admin.ModelAdmin):
     list_display = (
-        'id', 'desig_document_electronic_model_part_product', 'name', 'category',
+        'desig_document_electronic_model_part_product', 'name', 'category',
         'status', 'version', 'trl', 'author',
-        'current_responsible', 'date_of_creation', 'date_of_change'
+        'current_responsible', 'date_of_creation', 'date_of_change', 'info_format'
     )
     list_filter = ('category', 'status', 'trl', 'date_of_creation')
     search_fields = ('desig_document_electronic_model_part_product', 'name', 'author__username', 'current_responsible__username')
-    readonly_fields = ('date_of_change', 'info_format')
+    readonly_fields = ('date_of_change',)
 
     def save_model(self, request, obj, form, change):
         if not obj.pk:
@@ -328,16 +360,15 @@ class AddReportTechnicalProposalAdmin(admin.ModelAdmin):
         'category',
         'status',
         'version',
-        'trl',
         'priority',
         'author',
         'current_responsible',
         'date_of_creation',
         'date_of_change',
-        'uploaded_file_1',
     )
-    list_filter = ('category', 'status', 'trl', 'date_of_creation')
+    list_filter = ('category', 'status', 'date_of_creation')
     readonly_fields = ('date_of_change',)
+    inlines = [AttachmentInline]
     search_fields = ('name', 'author__username', 'current_responsible__username')
     fieldsets = (
         (None, {
@@ -348,8 +379,6 @@ class AddReportTechnicalProposalAdmin(admin.ModelAdmin):
                 'status',
                 'version',
                 'version_diff',
-                'litera',
-                'trl',
                 'priority',
                 'validity_date',
                 'subscribers',
@@ -361,7 +390,6 @@ class AddReportTechnicalProposalAdmin(admin.ModelAdmin):
                 'current_responsible',
                 'date_of_creation',
                 'date_of_change',
-                'uploaded_file_1',
             )
         }),
     )
@@ -369,7 +397,7 @@ class AddReportTechnicalProposalAdmin(admin.ModelAdmin):
 @admin.register(ProtocolTechnicalProposal)
 class ProtocolTechnicalProposalAdmin(admin.ModelAdmin):
     list_display = (
-        'id', 'name', 'desig_document_protocol_technical_proporsal', 'category',
+        'name', 'category',
         'status', 'version',
         'author', 'current_responsible',
         'date_of_creation', 'date_of_change'
@@ -489,48 +517,58 @@ class CallAdmin(admin.ModelAdmin):
     # для экономии запросов в changelist
     list_select_related = ('customer', 'decision_maker')
 
+    def _get_attr_chain(self, obj, dotted):
+        """Достаёт значение по цепочке 'customer__name_of_company'."""
+        cur = obj
+        for part in dotted.split('__'):
+            if cur is None:
+                return ''
+            cur = getattr(cur, part, None)
+        return '' if cur is None else str(cur)
+
     def get_search_results(self, request, queryset, search_term):
-        """
-        Полный контроль поиска:
-        - разбиваем запрос на слова;
-        - каждое слово должно встречаться хотя бы в одном из SEARCH_FIELDS;
-        - регистр игнорируем (i* lookups);
-        - если введено число — добавляем точное совпадение по id.
-        """
-        # если пусто — отдадим стандартное поведение (ничего не фильтруем)
+        # пустой ввод — стандартное поведение
         if not search_term:
             return queryset, False
 
-        terms = [t for t in search_term.split() if t]
-        q_total = Q()
+        qs = queryset.select_related('customer', 'decision_maker')
 
-        # каждое слово должно совпасть хотя бы по одному полю
-        for term in terms:
-            q_one_term = Q()
-            for raw_field in self.SEARCH_FIELDS:
-                # поддерживаем префиксы как в Django Admin
-                if raw_field.startswith('^'):
-                    field, lookup = raw_field[1:], '__istartswith'
-                elif raw_field.startswith('='):
-                    field, lookup = raw_field[1:], '__iexact'
-                elif raw_field.startswith('@'):
-                    # работает только на PostgreSQL + при наличии конфигурации FTS
-                    field, lookup = raw_field[1:], '__search'
-                else:
-                    field, lookup = raw_field, '__icontains'
-
-                q_one_term |= Q(**{f'{field}{lookup}': term})
-
-            q_total &= q_one_term
-
-        # точное совпадение по id, если введено число
+        # если ввели число — добавим такой id к результатам
+        id_match = set()
         if search_term.isdigit():
-            q_total |= Q(id=int(search_term))
+            try:
+                id_match.add(int(search_term))
+            except ValueError:
+                pass
 
-        qs = queryset.filter(q_total)
+        # нормализуем поисковую строку
+        s = search_term.strip()
+        terms = [t for t in s.split() if t]
+        folded_terms = [t.casefold() for t in terms]
 
-        # distinct на случай джойнов с m2m/one-to-many
-        return qs.distinct(), True
+        matched_ids = []
+
+        # перебираем объекты пачками, формируем «буфер» и ищем без регистра
+        for obj in qs.iterator(chunk_size=500):
+            parts = [self._get_attr_chain(obj, f) for f in self.SEARCH_FIELDS]
+            blob = ' '.join(parts).casefold()
+
+            ok = True
+            for t in folded_terms:
+                if t not in blob:
+                    ok = False
+                    break
+            if ok:
+                matched_ids.append(obj.id)
+
+        # плюс числовой id, если совпал
+        if id_match:
+            matched_ids.extend(id_match)
+
+        if not matched_ids:
+            return queryset.none(), True
+
+        return queryset.filter(id__in=set(matched_ids)), True
 
 
 @admin.register(Letter)
@@ -685,8 +723,8 @@ class WorkAssignmentAdmin(admin.ModelAdmin):
 
     list_display = (
         'name', 'author', 'executor', 'technical_assignment',
-        'effective_deadline_readonly',  # новый столбец
-        'overdue_flag',                 # новый столбец
+        'effective_deadline_readonly',
+        'overdue_flag',
         'result', 'version',
         'target_deadline', 'hard_deadline',
         'control_status', 'control_date',
@@ -706,7 +744,6 @@ class WorkAssignmentAdmin(admin.ModelAdmin):
                 'name', 'executor', 'category', 'technical_assignment',
                 'author', 'current_responsible', 'version',
                 'task', 'acceptance_criteria',
-                        'uploaded_file'
             )
         }),
         ('Сроки (изменять через «Перенести срок»)', {
@@ -731,7 +768,7 @@ class WorkAssignmentAdmin(admin.ModelAdmin):
     effective_deadline_readonly.short_description = "Эффективный срок"
 
     def overdue_flag(self, obj):
-        return "⚠️" if obj.is_overdue() else "—"
+        return "—" if obj.result else ("⚠️" if obj.is_overdue() else "—")
     overdue_flag.short_description = "Просрочено?"
 
     def get_urls(self):
@@ -1153,4 +1190,4 @@ class CheckDocumentWorkflowAdmin(admin.ModelAdmin):
 
     @admin.register(Attachment)
     class AttachmentAdmin(admin.ModelAdmin):
-        list_display = ('id', 'work', 'file')
+        list_display = ('id', 'file')
