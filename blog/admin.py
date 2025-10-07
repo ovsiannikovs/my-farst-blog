@@ -346,7 +346,7 @@ class ElectronicModelPartProductAdmin(admin.ModelAdmin):
 @admin.register(ReportTechnicalProposal)
 class ReportTechnicalProposalAdmin(admin.ModelAdmin):
     list_display = (
-        'id', 'name', 'category', 'status', 'version',
+        'name', 'category', 'status', 'version',
         'author', 'current_responsible', 'date_of_creation'
     )
     list_filter = ('category', 'status', 'date_of_creation')
