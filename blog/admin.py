@@ -59,7 +59,6 @@ from .models import (
     Route,
     RouteProcess,
     SoftwareProduct,
-    TechnicalAssignment,
     TechnicalProposal,
     TaskForDesignWork,
     RevisionTask,
@@ -119,19 +118,26 @@ class ListTechnicalProposalInline(admin.TabularInline):
             return False
         return True
 
-class TechnicalAssignmentInline(admin.TabularInline):  # или StackedInline
-    model = TechnicalAssignment
+
+class TaskForDesignWorkInline(admin.TabularInline):
+    model = TaskForDesignWork
+    extra = 1
+
+class RevisionTaskInline(admin.TabularInline):
+    model = RevisionTask
+    extra = 1
+
+class WorkAssignmentInline(admin.TabularInline):
+    model = WorkAssignment
     extra = 1
 
 
 @admin.register(Post)
 class PostAdmin(admin.ModelAdmin):
-    list_display = ('name', 'desig_document_post', 'author', 'date_of_creation', 'date_of_change', 'technical_assignments_count',
-        'open_tech_assignments_link',
-        'add_tech_assignment_link',)
+    list_display = ('name', 'desig_document_post', 'author', 'date_of_creation', 'date_of_change')
     search_fields = ('name',)
     readonly_fields = ('date_of_change',)
-    inlines = [ListTechnicalProposalInline, TechnicalAssignmentInline]
+    inlines = [ListTechnicalProposalInline, TaskForDesignWorkInline, RevisionTaskInline, WorkAssignmentInline]
 
     def save_formset(self, request, form, formset, change):
         instances = formset.save(commit=False)
@@ -631,13 +637,7 @@ admin.site.register(Deal_stage, Deal_stageAdmin)
 admin.site.register(Notifications)
 
 
-class TaskForDesignWorkInline(admin.TabularInline):
-    model = TaskForDesignWork
-    extra = 1
 
-class RevisionTaskInline(admin.TabularInline):
-    model = RevisionTask
-    extra = 1
 
 class WorkAssignmentInline(admin.TabularInline):
     model = WorkAssignment
@@ -660,9 +660,9 @@ class WorkAssignmentInline(admin.TabularInline):
 
 @admin.register(TaskForDesignWork)
 class TaskForDesignWorkAdmin(admin.ModelAdmin):
-    list_display = ('name', 'category', 'author', 'date_of_creation', 'status', 'version', 'technical_assignment', 'open_task_link', 'add_task_link')
+    list_display = ('name', 'category', 'author', 'date_of_creation', 'status', 'version', 'post', 'open_task_link', 'add_task_link')
     search_fields = ('name', 'author__username', 'current_responsible__username')
-    list_filter = ('status', 'priority', 'language', 'technical_assignment')
+    list_filter = ('status', 'priority', 'language', 'post')
     readonly_fields = ('date_of_creation', 'date_of_change')
     search_fields = ('name',)
 
@@ -691,12 +691,12 @@ class TaskForDesignWorkAdmin(admin.ModelAdmin):
 
 @admin.register(RevisionTask)
 class RevisionTaskAdmin(admin.ModelAdmin):
-    list_display = ('name', 'category', 'author', 'technical_assignment', 'date_of_creation', 'status', 'version')
-    search_fields = ('name', 'author__username', 'current_responsible__username', 'technical_assignment__name')
-    list_filter = ('status', 'priority', 'language', 'technical_assignment',)
+    list_display = ('name', 'category', 'author', 'post', 'date_of_creation', 'status', 'version')
+    search_fields = ('name', 'author__username', 'current_responsible__username', 'post__name')
+    list_filter = ('status', 'priority', 'language', 'post',)
     readonly_fields = ('date_of_creation', 'date_of_change')
 
-    autocomplete_fields = ['technical_assignment']
+    autocomplete_fields = ['post']
 
 
 class DeadlineChangeInline(admin.TabularInline):
@@ -722,7 +722,7 @@ class WorkAssignmentAdmin(admin.ModelAdmin):
     #form = WorkAssignmentForm
 
     list_display = (
-        'name', 'author', 'executor', 'technical_assignment',
+        'name', 'author', 'executor', 'post',
         'effective_deadline_readonly',
         'overdue_flag',
         'result', 'version',
@@ -741,7 +741,7 @@ class WorkAssignmentAdmin(admin.ModelAdmin):
     fieldsets = (
         ('Основная информация', {
             'fields': (
-                'name', 'executor', 'category', 'technical_assignment',
+                'name', 'executor', 'category', 'post',
                 'author', 'current_responsible', 'version',
                 'task', 'acceptance_criteria',
             )
@@ -827,114 +827,6 @@ class WorkAssignmentAdmin(admin.ModelAdmin):
             "has_change_permission": self.has_change_permission(request, obj),
         }
         return render(request, "admin/blog/workassignment/reschedule.html", context)
-
-@admin.register(TechnicalAssignment)
-class TechnicalAssignmentAdmin(admin.ModelAdmin):
-    list_display = ('name', 'author', 'date_of_creation', 'last_editor', 'date_of_change', 'current_responsible', 'version')
-    search_fields = ('name', 'author__username', 'current_responsible__username')
-    list_filter = ('access', 'security', 'post')
-    #inlines = [WorkAssignmentInline, RevisionTaskInline, TaskForDesignWorkInline]
-
-    def open_work_assignments_link(self, obj):
-        url = reverse('admin:blog_workassignment_changelist') + f'?technical_assignment__id__exact={obj.id}'
-        return format_html('<a class="button" href="{}">📂 Открыть РЗ</a>', url)
-
-    open_work_assignments_link.short_description = "Рабочие задания"
-
-    list_display = (
-        'id', 'name',
-        'work_assignments_count',
-        'open_work_assignments_link',
-        'add_work_assignment_link',
-        'revision_tasks_count',
-        'open_revision_tasks_link',
-        'add_revision_task_link',
-        'design_works_count', 'open_design_works_link', 'add_design_work_link',
-    )
-    search_fields = ('name',)
-
-    def work_assignments_count(self, obj):
-        return obj.work_assignments.count()
-
-    work_assignments_count.short_description = 'РЗ (шт.)'
-
-    def open_work_assignments_link(self, obj):
-        # проверь, что app_label = 'blog' и модель = 'workassignment' (обычно так)
-        url = reverse('admin:blog_workassignment_changelist') + f'?technical_assignment__id__exact={obj.pk}'
-        return format_html('<a class="button" href="{}">📂 Открыть РЗ</a>', url)
-
-    open_work_assignments_link.short_description = 'Рабочие задания'
-
-    def add_work_assignment_link(self, obj):
-        url = reverse('admin:blog_workassignment_add') + f'?technical_assignment={obj.pk}'
-        return format_html('<a class="button" href="{}">➕ Новое РЗ</a>', url)
-
-    add_work_assignment_link.short_description = 'Создать РЗ'
-
-    class Media:
-        css = {'all': ('blog/admin_hscroll.css',)}
-
-    def revision_tasks_count(self, obj):
-        return obj.revision_tasks.count()
-    revision_tasks_count.short_description = 'Ревизии (шт.)'
-
-    def open_revision_tasks_link(self, obj):
-        url = reverse('admin:blog_revisiontask_changelist') + f'?technical_assignment__id__exact={obj.pk}'
-        return format_html('<a class="button" href="{}">📂 Открыть ревизии</a>', url)
-    open_revision_tasks_link.short_description = 'Список ревизий'
-
-    def add_revision_task_link(self, obj):
-        url = reverse('admin:blog_revisiontask_add') + f'?technical_assignment={obj.pk}'
-        return format_html('<a class="button" href="{}">➕ Новая ревизия</a>', url)
-    add_revision_task_link.short_description = 'Создать ревизию'
-
-    def design_works_count(self, obj):
-        return obj.design_works.count()
-
-    design_works_count.short_description = 'ПЗ (шт.)'
-
-    def open_design_works_link(self, obj):
-        url = reverse('admin:blog_taskfordesignwork_changelist') + f'?technical_assignment__id__exact={obj.pk}'
-        return format_html('<a class="button" href="{}">📂 Открыть ПЗ</a>', url)
-
-    open_design_works_link.short_description = 'Список ПЗ'
-
-    def add_design_work_link(self, obj):
-        url = reverse('admin:blog_taskfordesignwork_add') + f'?technical_assignment={obj.pk}'
-        return format_html('<a class="button" href="{}">➕ Новое ПЗ</a>', url)
-
-    add_design_work_link.short_description = 'Создать ПЗ'
-
-    # кнопки «Открыть ПЗ» и «Новое ПЗ»
-    def design_work_buttons(self, obj):
-        list_url = reverse('admin:blog_taskfordesignwork_changelist') + f'?technical_assignment__id__exact={obj.pk}'
-        add_url  = reverse('admin:blog_taskfordesignwork_add') + f'?technical_assignment={obj.pk}'
-        return format_html(
-            '{} {}',
-            _btn(list_url, '📂 Открыть ПЗ'),
-            _btn(add_url,  '➕ Новое ПЗ'),
-        )
-    design_work_buttons.short_description = 'Проектные задания'
-
-    class Media:
-        css = {'all': ('blog/admin_hscroll.css',)}
-
-
-try:
-    admin.site.unregister(TechnicalAssignment)
-except admin.sites.NotRegistered:
-    pass
-admin.site.register(TechnicalAssignment, TechnicalAssignmentAdmin)
-
-autocomplete_fields = ['post']  # удобно выбирать пост вручную при необходимости
-
-
-def get_changeform_initial_data(self, request):
-    initial = super().get_changeform_initial_data(request)
-    post_id = request.GET.get('post')
-    if post_id:
-        initial['post'] = post_id
-    return initial
 
 @admin.register(WorkAssignmentDeadlineChange)
 class WorkAssignmentDeadlineChangeAdmin(admin.ModelAdmin):
