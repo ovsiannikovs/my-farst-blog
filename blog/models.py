@@ -1343,7 +1343,7 @@ class WorkAssignmentDeadlineChange(models.Model):
                     .order_by("-index")
                     .first()
                 )
-                self.index = (last.index if last else 0) + 1
+                self.index = (0 if last is None or last.index is None else int(last.index)) + 1
         super().save(*args, **kwargs)
 
     def __str__(self):
