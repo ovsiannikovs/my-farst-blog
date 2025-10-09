@@ -1027,7 +1027,7 @@ class TaskForDesignWork(models.Model):
 
     name = models.CharField(max_length=100, unique=True, blank=True, null=True, verbose_name="наименование")
     category = models.CharField(max_length=100, default="ТЗ ОКР", verbose_name="категория")
-    technical_assignment = models.ForeignKey('TechnicalAssignment', on_delete=models.CASCADE, null=True, blank=True, related_name='design_works', verbose_name="Связанное техническое задание (Разработка)")
+    post = models.ForeignKey('Post', on_delete=models.CASCADE, null=True, blank=True, related_name='task_for_design_work', verbose_name="Связанная разработка")
     info_format = models.CharField(max_length=100, choices=INFO_FORMAT_CHOICES, blank=True, null=True,
                                    verbose_name="формат предоставления информации")
     author = models.ForeignKey(User, on_delete=models.CASCADE, related_name="created_designtasks", verbose_name="автор")
@@ -1059,8 +1059,8 @@ class TaskForDesignWork(models.Model):
         verbose_name_plural = 'Технические задания на ОКР'
 
     def save(self, *args, **kwargs):
-        if self.technical_assignment and not self.name:
-            self.name = self.technical_assignment.name
+        if self.post and not self.name:
+            self.name = self.post.name
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -1083,7 +1083,7 @@ class RevisionTask(models.Model):
 
     name = models.CharField(max_length=100, unique=True, blank=True, null=True, verbose_name="наименование")
     category = models.CharField(max_length=100, default="ТЗ Д", verbose_name="категория")
-    technical_assignment = models.ForeignKey('TechnicalAssignment', on_delete=models.CASCADE, null=True, blank=True, related_name='revision_tasks', verbose_name="Связанное техническое задание")
+    post = models.ForeignKey('Post', on_delete=models.CASCADE, null=True, blank=True, related_name='revision_tasks', verbose_name="Связанная разработка")
     info_format = models.CharField(max_length=100, choices=INFO_FORMAT_CHOICES, blank=True, null=True, verbose_name="формат")
     author = models.ForeignKey(User, on_delete=models.CASCADE, related_name="created_revisions", verbose_name="автор")
     date_of_creation = models.DateTimeField(default=timezone.now, verbose_name="Дата и время создания")
@@ -1114,8 +1114,8 @@ class RevisionTask(models.Model):
         verbose_name_plural = 'Технические задания на доработку'
 
     def save(self, *args, **kwargs):
-        if self.technical_assignment and not self.name:
-            self.name = f"{self.technical_assignment.name} - Ревизия"
+        if self.post and not self.name:
+            self.name = f"{self.post.name} - Ревизия"
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -1141,13 +1141,7 @@ class WorkAssignment(models.Model):
     category = models.CharField(max_length=100, default="РЗ", verbose_name="Категория")
     executor = models.ForeignKey(User, on_delete=models.CASCADE, null= True, related_name= "executed_workassignments", verbose_name="Исполнитель")
     task = models.CharField('Задача', max_length=255, blank=True)
-    technical_assignment = models.ForeignKey(
-        'TechnicalAssignment',
-        on_delete=models.CASCADE,
-        null=True, blank=True,
-        related_name='work_assignments',
-        verbose_name="Связанное техническое задание (Разработка)"
-    )
+    post = models.ForeignKey('Post', on_delete=models.CASCADE, null=True, blank=True, related_name='work_assignments', verbose_name="Связанная разработка")
     author = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Автор")
     date_of_creation = models.DateTimeField(default=timezone.now, verbose_name="Дата и время создания")
     last_editor = models.ForeignKey(
@@ -1282,6 +1276,11 @@ class WorkAssignment(models.Model):
         else:
             self.result = 'Не выполнено'
 
+    def save(self, *args, **kwargs):
+        if self.post and not self.name:
+            self.name = self.post.name
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return self.name or "Без названия"
 
@@ -1348,48 +1347,6 @@ class WorkAssignmentDeadlineChange(models.Model):
 
     def __str__(self):
         return f"Перенос #{self.index}"
-
-class TechnicalAssignment(models.Model):
-    name = models.CharField(max_length=100, unique=True, null=True, blank=True, verbose_name="наименование")
-    post = models.ForeignKey('Post', on_delete=models.CASCADE, null=True, blank=True, related_name='technical_assignments', verbose_name="Связанная разработка")
-    author = models.ForeignKey(User, related_name='created_assignments', null = True, on_delete=models.CASCADE, verbose_name="автор")
-    date_of_creation = models.DateTimeField(default=timezone.now, verbose_name="Дата и время создания")
-    last_editor = models.ForeignKey(User, related_name='edited_assignments', null = True, on_delete=models.CASCADE,
-                                    verbose_name="последний редактор")
-    date_of_change = models.DateTimeField(auto_now=True, verbose_name="Дата и время последнего изменения")
-    current_responsible = models.ForeignKey(User, related_name='responsible_assignments', null = True, on_delete=models.CASCADE,
-                                            verbose_name="такущий ответственный")
-    version = models.CharField(max_length=3, blank=True, default='1', null=True, verbose_name="версия")
-    version_diff = models.TextField(max_length=1000, blank=True, default='Стартовая версия', null=True, verbose_name="разница версий")
-
-    class AccessLevel(models.TextChoices):
-        READ = '4', 'Чтение'
-        WRITE = '2', 'Запись'
-        EXECUTE = '1', 'Исполнение'
-        FULL = '7', 'Чтение, запись и исполнение'
-
-    access = models.CharField(max_length=1, choices=AccessLevel.choices, default=AccessLevel.FULL)
-
-    class SecurityLevel(models.TextChoices):
-        OPEN = 'О', 'Общий'
-        CONFIDENTIAL = 'К', 'Конфиденциально'
-        SECRET = 'С', 'Секретно'
-        TOP_SECRET = 'СС', 'Совершенно секретно'
-
-    security = models.CharField(max_length=2, choices=SecurityLevel.choices, default=SecurityLevel.OPEN)
-
-    class Meta:
-        verbose_name = 'Техническое задание'
-        verbose_name_plural = 'Технические задания'
-
-    def save(self, *args, **kwargs):
-        if self.post and not self.name:
-            self.name = self.post.name
-        super().save(*args, **kwargs)
-
-    def __str__(self):
-        return self.name
-
 
 class Process(models.Model):
     class Kind(models.TextChoices):
@@ -1594,4 +1551,3 @@ class Attachment(models.Model):
     content_object = GenericForeignKey("content_type", "object_id")
 
     file = models.FileField(upload_to="attachments/")
-

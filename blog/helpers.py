@@ -82,3 +82,4 @@ def next_step_code_after(route, current_code: str) -> Optional[str]:
     except ValueError:
         return None
     return ordered_codes[i + 1] if i + 1 < len(ordered_codes) else None
+
