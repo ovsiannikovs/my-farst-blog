@@ -13,7 +13,6 @@ from django.forms import ValidationError
 from django.contrib.contenttypes.admin import GenericTabularInline
 from django.contrib.contenttypes.forms import BaseGenericInlineFormSet
 
-
 from crm.models import (
     Call,
     Company_branch,
@@ -26,7 +25,7 @@ from crm.models import (
     Product,
     Customer,
 )
-
+from shared_repository.models import SharedRepository
 
 from .admin_forms import RescheduleAdminForm
 from .forms import WorkAssignmentForm
@@ -1083,3 +1082,218 @@ class CheckDocumentWorkflowAdmin(admin.ModelAdmin):
     @admin.register(Attachment)
     class AttachmentAdmin(admin.ModelAdmin):
         list_display = ('id', 'file')
+
+#admin.site.register(SharedRepository, SoftwareProductAdmin)
+
+@admin.register(SharedRepository)
+class SharedRepositoryAdmin(admin.ModelAdmin):
+    list_display = [
+        'id_display',
+        'document_title_display',
+        'version_display',
+        'author_display',
+        'current_responsible_display',
+        'date_of_creation_display',
+        'date_of_change_display',
+        'uploaded_file_display',
+    ]
+
+    list_filter = [
+        'author',
+        'current_responsible',
+        'date_of_creation',
+    ]
+
+    search_fields = [
+        'document_title',
+        'document_purpose',
+        'id',
+    ]
+
+    readonly_fields = [
+        'id',
+        'date_of_creation',
+        'date_of_change',
+        'uploaded_file_info',
+    ]
+
+    fieldsets = (
+        ('Основная информация', {
+            'fields': (
+                'id',
+                'document_title',
+                'version',
+                'uploaded_file',
+                'uploaded_file_info',
+                'document_purpose',
+            )
+        }),
+        ('Пользователи системы', {
+            'fields': (
+                'author',
+                'last_editor',
+                'current_responsible',
+            )
+        }),
+        ('Даты и время', {
+            'fields': (
+                'date_of_creation',
+                'date_of_change',
+            )
+        }),
+    )
+
+    # Кастомные отображения для соответствия ТЗ
+
+    def id_display(self, obj):
+        """Отображение id как в ТЗ: 'id: хххххххх'"""
+        return format_html(
+            '<strong>id:</strong> {}',
+            obj.id
+        )
+
+    id_display.short_description = 'Уникальный идентификатор'
+    id_display.admin_order_field = 'id'
+
+    def document_title_display(self, obj):
+        """Отображение названия документа как в ТЗ: 'document title: Название'"""
+        return format_html(
+            '<strong>document title:</strong> {}',
+            obj.document_title
+        )
+
+    document_title_display.short_description = 'Название документа'
+    document_title_display.admin_order_field = 'document_title'
+
+    def version_display(self, obj):
+        """Отображение версии как в ТЗ: 'version: 1*'"""
+        return format_html(
+            '<strong>version:</strong> {}',
+            obj.version
+        )
+
+    version_display.short_description = 'Версия'
+    version_display.admin_order_field = 'version'
+
+    def author_display(self, obj):
+        """Отображение автора как в ТЗ: 'author: NeradovskayaIV'"""
+        return format_html(
+            '<strong>author:</strong> {}',
+            obj.author.username
+        )
+
+    author_display.short_description = 'Создатель (автор)'
+    author_display.admin_order_field = 'author__username'
+
+    def current_responsible_display(self, obj):
+        """Отображение ответственного как в ТЗ: 'current_responsible: NeradovskayaIV'"""
+        return format_html(
+            '<strong>current_responsible:</strong> {}',
+            obj.current_responsible.username
+        )
+
+    current_responsible_display.short_description = 'Текущий ответственный'
+    current_responsible_display.admin_order_field = 'current_responsible__username'
+
+    def date_of_creation_display(self, obj):
+        """Отображение даты создания как в ТЗ: 'date_of_creation: 2025-04-03 14:52:13'"""
+        return format_html(
+            '<strong>date_of_creation:</strong> {}',
+            obj.date_of_creation.strftime('%Y-%m-%d %H:%M:%S')
+        )
+
+    date_of_creation_display.short_description = 'Дата и время создания'
+    date_of_creation_display.admin_order_field = 'date_of_creation'
+
+    def date_of_change_display(self, obj):
+        """Отображение даты изменения как в ТЗ: 'date_of_change: 2025-04-04 11:53:15'"""
+        return format_html(
+            '<strong>date_of_change:</strong> {}',
+            obj.date_of_change.strftime('%Y-%m-%d %H:%M:%S')
+        )
+
+    date_of_change_display.short_description = 'Дата и время последнего изменения'
+    date_of_change_display.admin_order_field = 'date_of_change'
+
+    def uploaded_file_display(self, obj):
+        """Отображение файла как в ТЗ: 'uploaded_file: имя файла'"""
+        if obj.uploaded_file:
+            filename = obj.uploaded_file.name.split('/')[-1]  # Только имя файла
+            return format_html(
+                '<strong>uploaded_file:</strong> <a href="{}" target="_blank">{}</a>',
+                obj.uploaded_file.url,
+                filename
+            )
+        return format_html(
+            '<strong>uploaded_file:</strong> Нет файла'
+        )
+
+    uploaded_file_display.short_description = 'Загружаемый файл'
+
+    def uploaded_file_info(self, obj):
+        """Информация о файле для детального просмотра"""
+        if obj.uploaded_file:
+            return format_html(
+                '<div style="background: #f0f0f0; padding: 10px; margin: 10px 0;">'
+                '<p><strong>Имя файла:</strong> {}</p>'
+                '<p><a href="{}" target="_blank" class="button">📥 Открыть файл</a></p>'
+                '</div>',
+                obj.uploaded_file.name,
+                obj.uploaded_file.url
+            )
+        return "Файл не загружен"
+
+    uploaded_file_info.short_description = 'Информация о файле'
+
+    def save_model(self, request, obj, form, change):
+        """Автоматическая установка пользователей при сохранении из админки"""
+        if not change:  # Если это создание нового документа
+            # Устанавливаем автора и последнего редактора как текущего пользователя
+            obj.author = request.user
+            obj.last_editor = request.user
+            # Если current_responsible не указан, устанавливаем текущего пользователя
+            if not obj.current_responsible:
+                obj.current_responsible = request.user
+        else:  # Редактирование существующего
+            # Обновляем только последнего редактора
+            obj.last_editor = request.user
+
+        super().save_model(request, obj, form, change)
+
+    def get_form(self, request, obj=None, **kwargs):
+        """Кастомизация формы в админке"""
+        form = super().get_form(request, obj, **kwargs)
+
+        # Устанавливаем help_text для полей как в ТЗ
+        if 'id' in form.base_fields:
+            form.base_fields['id'].help_text = 'Уникальное поле'
+
+        if 'document_title' in form.base_fields:
+            form.base_fields['document_title'].help_text = 'Уникальное поле. Все текстовые символы - 100 символов max'
+
+        if 'author' in form.base_fields:
+            form.base_fields['author'].help_text = 'Имя пользователя системы (ссылка на User)'
+
+        if 'date_of_creation' in form.base_fields:
+            form.base_fields['date_of_creation'].help_text = 'Формат: YYYY-MM-DD HH:MI:SS'
+
+        if 'last_editor' in form.base_fields:
+            form.base_fields['last_editor'].help_text = 'Имя пользователя системы (ссылка на User)'
+
+        if 'date_of_change' in form.base_fields:
+            form.base_fields['date_of_change'].help_text = 'Формат: YYYY-MM-DD HH:MI:SS'
+
+        if 'current_responsible' in form.base_fields:
+            form.base_fields['current_responsible'].help_text = 'Имя пользователя системы (ссылка на User)'
+
+        if 'version' in form.base_fields:
+            form.base_fields['version'].help_text = 'Цифры, 3 символа max. Значение по умолчанию: 1'
+
+        if 'uploaded_file' in form.base_fields:
+            form.base_fields[
+                'uploaded_file'].help_text = 'Текст, строго в соответствии с данными в колонке "Визуализация"'
+
+        if 'document_purpose' in form.base_fields:
+            form.base_fields['document_purpose'].help_text = 'Все текстовые символы - 5000 символов max'
+
+        return form
