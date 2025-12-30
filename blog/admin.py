@@ -13,18 +13,8 @@ from django.forms import ValidationError
 from django.contrib.contenttypes.admin import GenericTabularInline
 from django.contrib.contenttypes.forms import BaseGenericInlineFormSet
 
-from crm.models import (
-    Call,
-    Company_branch,
-    Deal,
-    Deal_stage,
-    Decision_maker,
-    Letter,
-    Meeting,
-    Notifications,
-    Product,
-    Customer,
-)
+from crm.models import Notifications, Customer, Decision_maker, Deal, Product, Deal_stage, Call, Letter, Company_branch, Meeting, MeetingFile, SupportTicket, TicketComment, KnowledgeBaseArticle
+from crm.forms import TicketCommentForm, KnowledgeBaseArticleForm, SupportTicketForm
 from shared_repository.models import SharedRepository
 
 from .admin_forms import RescheduleAdminForm
@@ -471,14 +461,14 @@ def normalize_search(text: str) -> list[str]:
 class CustomerAdmin(admin.ModelAdmin):
     list_display = ('name_of_company', 'revenue_for_last_year', 'length_of_electrical_network_km')
     # Объедини фильтры в один список
-    list_filter = ('name_of_company', 'revenue_for_last_year')  # + добавь кастомный если нужен: RevenueRangeFilter
-    # По каким полям можно искать клиентов (для автокомплита тоже важно)
-    search_fields = ('name_of_company', 'address')  # оставь только реально существующие
+    list_filter = ('name_of_company', 'revenue_for_last_year')
+    list_filter = (RevenueRangeFilter,)
+    search_fields = ('name_of_company__icontains', 'address__icontains')  # Поиск по этим полям
 
 class Decision_makerAdmin(admin.ModelAdmin):
     list_display = ('full_name', 'city_of_location', 'function', 'customer')
     list_filter = ('city_of_location', 'function', 'customer')
-    search_fields = ('full_name', 'phone_number', 'email')
+    search_fields = ('full_name__icontains', 'phone_number__icontains', 'email__icontains')
 
 
 class DealAdmin(admin.ModelAdmin):
@@ -500,7 +490,7 @@ class Deal_stageAdmin(admin.ModelAdmin):
     search_fields = ('deal__customer__name_of_company', 'description_of_task_at_stage')
 
 
-@admin.register(Call)
+#@admin.register(Call)
 class CallAdmin(admin.ModelAdmin):
     list_display = ('customer', 'decision_maker', 'planned_date', 'responsible', 'deal')
     list_filter = ('planned_date',)
@@ -591,12 +581,22 @@ class Company_branchAdmin(admin.ModelAdmin):
     list_filter = (RevenueRangeFilter,)
     search_fields = ('name_of_company', 'address')  # Поиск по этим полям
 
+class MeetingFileInline(admin.TabularInline):
+    model = MeetingFile
+    extra = 1
+    fields = ['file', 'description', 'uploaded_at']
+    readonly_fields = ['uploaded_at']
+    max_num = 10  # Ограничение на количество файлов
 
 @admin.register(Meeting)
 class MeetingAdmin(admin.ModelAdmin):
-    list_display = ('id', 'customer', 'decision_maker', 'responsible_user', 'planned_date')
-    list_filter = ('planned_date', 'customer', 'decision_maker', 'responsible_user')
-    ordering = ('-planned_date',)
+    list_display = [
+        'id', 'customer', 'decision_maker', 'responsible_user',
+        'meeting_date', 'meeting_time', 'status'
+    ]
+    list_filter = ('meeting_date', 'customer', 'decision_maker', 'responsible_user', 'status')
+    ordering = ('-meeting_date', '-meeting_time')
+    inlines = [MeetingFileInline]  # Добавляем inline для файлов
 
     # Отключаем стандартный механизм, чтобы полностью контролировать поведение
     search_fields = ('id',)
@@ -606,6 +606,24 @@ class MeetingAdmin(admin.ModelAdmin):
         'customer__name_of_company',     # основной заголовок компании
         'decision_maker__full_name',
     )
+
+    fieldsets = (
+        ('Основная информация', {
+            'fields': ('customer', 'decision_maker', 'responsible_user')
+        }),
+        ('Дата и время', {
+            'fields': ('meeting_date', 'meeting_time')
+        }),
+        ('Статус и описание', {
+            'fields': ('status', 'goal_description', 'result_description')
+        }),
+    )
+
+    def save_model(self, request, obj, form, change):
+        # Автоматически подставляем ЛПР заказчика, если не выбран
+        if obj.customer and not obj.decision_maker:
+            obj.decision_maker = obj.customer.лпр
+        super().save_model(request, obj, form, change)
 
     def get_search_results(self, request, queryset, search_term):
         terms = normalize_search(search_term)
@@ -627,6 +645,173 @@ class MeetingAdmin(admin.ModelAdmin):
         # Здесь FK, так что False, но вернём True «на всякий случай», это безопасно.
         return qs, True
 
+@admin.register(MeetingFile)
+class MeetingFileAdmin(admin.ModelAdmin):
+    list_display = ['meeting', 'file', 'description', 'uploaded_at']
+    list_filter = ['uploaded_at', 'meeting']
+    search_fields = ['meeting__customer__name_of_company', 'description']
+
+
+
+
+# Inline для комментариев
+class TicketCommentInline(admin.TabularInline):
+    model = TicketComment
+    form = TicketCommentForm
+    extra = 1
+    fields = ['author', 'text', 'file', 'created_date']
+    readonly_fields = ['created_date']
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('author')
+
+
+# Заявки
+@admin.register(SupportTicket)
+class SupportTicketAdmin(admin.ModelAdmin):
+    form = SupportTicketForm
+    list_display = [
+        'id', 'created_date', 'customer', 'product', 'get_category_display',
+        'truncated_problem', 'status_badge', 'status_changed_date',
+        'created_by', 'assigned_to', 'custom_actions'
+    ]
+    list_filter = [
+        'status', 'category', 'created_date', 'customer',
+        'product', 'assigned_to'
+    ]
+    search_fields = [
+        'problem', 'description', 'customer__name_of_company',
+        'id', 'created_by__username'
+    ]
+    readonly_fields = ['created_date', 'status_changed_date', 'created_by']
+    inlines = [TicketCommentInline]
+    date_hierarchy = 'created_date'
+    list_per_page = 25
+
+    fieldsets = (
+        ('Основная информация', {
+            'fields': ('customer', 'product', 'category', 'problem', 'description')
+        }),
+        ('Статус и назначение', {
+            'fields': ('status', 'assigned_to', 'created_by', 'created_date', 'status_changed_date')
+        }),
+    )
+
+    def truncated_problem(self, obj):
+        return obj.problem[:50] + '...' if len(obj.problem) > 50 else obj.problem
+
+    truncated_problem.short_description = 'Проблема'
+
+    def status_badge(self, obj):
+        status_colors = {
+            'new': 'gray',
+            'in_progress': 'blue',
+            'waiting': 'orange',
+            'resolved': 'green'
+        }
+        color = status_colors.get(obj.status, 'gray')
+        return format_html(
+            '<span style="background-color: {}; color: white; padding: 2px 6px; border-radius: 3px;">{}</span>',
+            color, obj.get_status_display()
+        )
+
+    status_badge.short_description = 'Статус'
+
+    def custom_actions(self, obj):
+        view_url = reverse('admin:crm_supportticket_change', args=[obj.id])
+        return format_html(
+            '<a href="{}">👁️ Просмотр</a>',
+            view_url
+        )
+
+    custom_actions.short_description = 'Действия'
+
+    def save_model(self, request, obj, form, change):
+        if not obj.pk:
+            obj.created_by = request.user
+        super().save_model(request, obj, form, change)
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related(
+            'customer', 'product', 'created_by', 'assigned_to'
+        )
+
+
+# База знаний
+@admin.register(KnowledgeBaseArticle)
+class KnowledgeBaseArticleAdmin(admin.ModelAdmin):
+    form = KnowledgeBaseArticleForm
+    list_display = [
+        'title', 'get_category_display', 'created_date', 'updated_date',
+        'author', 'status_badge', 'custom_actions'
+    ]
+    list_filter = ['status', 'category', 'created_date', 'author']
+    search_fields = ['title', 'content', 'author__username']
+    readonly_fields = ['created_date', 'updated_date', 'author']
+    list_per_page = 25
+
+    fieldsets = (
+        ('Основная информация', {
+            'fields': ('title', 'category', 'status')
+        }),
+        ('Содержание', {
+            'fields': ('content', 'file')
+        }),
+        ('Системная информация', {
+            'fields': ('author', 'created_date', 'updated_date'),
+            'classes': ('collapse',)
+        }),
+    )
+
+    def status_badge(self, obj):
+        status_colors = {
+            'draft': 'gray',
+            'published': 'green',
+            'archived': 'red'
+        }
+        color = status_colors.get(obj.status, 'gray')
+        return format_html(
+            '<span style="background-color: {}; color: white; padding: 2px 6px; border-radius: 3px;">{}</span>',
+            color, obj.get_status_display()
+        )
+
+    status_badge.short_description = 'Статус'
+
+    def custom_actions(self, obj):
+        view_url = reverse('admin:crm_knowledgebasearticle_change', args=[obj.id])
+        return format_html(
+            '<a href="{}">👁️ Просмотр</a>',
+            view_url
+        )
+
+    custom_actions.short_description = 'Действия'
+
+    def save_model(self, request, obj, form, change):
+        if not obj.pk:
+            obj.author = request.user
+        super().save_model(request, obj, form, change)
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('author')
+
+
+# Комментарии (отдельная регистрация для полного управления)
+@admin.register(TicketComment)
+class TicketCommentAdmin(admin.ModelAdmin):
+    list_display = ['ticket', 'author', 'truncated_text', 'created_date']
+    list_filter = ['created_date', 'author']
+    search_fields = ['text', 'ticket__id', 'author__username']
+    readonly_fields = ['created_date']
+
+    def truncated_text(self, obj):
+        return obj.text[:100] + '...' if len(obj.text) > 100 else obj.text
+
+    truncated_text.short_description = 'Комментарий'
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('ticket', 'author')
+
+
 
 admin.site.register(Customer, CustomerAdmin)
 admin.site.register(Decision_maker, Decision_makerAdmin)
@@ -634,6 +819,8 @@ admin.site.register(Deal, DealAdmin)
 admin.site.register(Product, ProductAdmin)
 admin.site.register(Deal_stage, Deal_stageAdmin)
 admin.site.register(Notifications)
+admin.site.register(Call, CallAdmin)
+#admin.site.register(Meeting, MeetingAdmin)
 
 
 
