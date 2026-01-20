@@ -64,8 +64,7 @@ class Decision_maker(models.Model):
         TECHNICAL_SPECIALIST = 2, 'технический специалист'
         OWNER = 3, 'собственник'
 
-    customer = models.OneToOneField(Customer, on_delete=models.CASCADE, related_name='лпр', null=False,
-    blank=False, verbose_name='Заказчик')
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE,  blank=True, null=True,related_name='decision_makers', verbose_name='Заказчик')
     full_name = models.CharField(max_length=255, verbose_name='ФИО')
     city_of_location = models.CharField(max_length=100, blank=True, null=True,verbose_name='Город местонахождения')
     function = models.IntegerField(choices=TypeOfFunction.choices, default=TypeOfFunction.DIRECTOR, blank=True, null=True, verbose_name='Роль')
@@ -80,7 +79,7 @@ class Decision_maker(models.Model):
     class Meta:
         verbose_name = 'ЛПР'
         verbose_name_plural = 'ЛПР'
-        ordering = ['full_name']
+        ordering = ['full_name', 'customer']
 
 
 class Product(models.Model):
