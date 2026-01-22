@@ -4,6 +4,7 @@ from django.shortcuts import redirect, render
 from django.urls import path, reverse
 from django.utils import timezone
 from django.utils.html import format_html
+from django.utils.safestring import mark_safe
 import re
 from django.db.models import Q, F, Value, TextField
 from functools import reduce
@@ -15,6 +16,8 @@ from django.contrib.contenttypes.forms import BaseGenericInlineFormSet
 
 from crm.models import Notifications, Customer, Decision_maker, Deal, Product, Deal_stage, Call, Letter, Company_branch, Meeting, MeetingFile, SupportTicket, TicketComment, KnowledgeBaseArticle
 from crm.forms import TicketCommentForm, KnowledgeBaseArticleForm, SupportTicketForm
+from shared_repository.models import SharedRepository
+from enterprise_asset_management.models import WorkEquipment, WorkEquipmentFile, TransportVehicle, Infrastructure
 from shared_repository.models import SharedRepository, IndependentDocumentAcceptSignature
 
 from .admin_forms import RescheduleAdminForm
@@ -823,6 +826,110 @@ admin.site.register(Call, CallAdmin)
 #admin.site.register(Meeting, MeetingAdmin)
 
 
+# EAM (СИСТЕМА УПРАВЛЕНИЕ АКТИВАМИ)
+class WorkEquipmentFileInline(admin.TabularInline):
+    model = WorkEquipmentFile
+    extra = 1
+
+# Рабочее оборудование
+@admin.register(WorkEquipment)
+class WorkEquipmentAdmin(admin.ModelAdmin):
+    list_display = ("name_type","serial_number_link","measuring_device_display","next_calibration_date_display","calibration_warning","workstation")
+    list_filter = ("measuring_device",)
+    search_fields = ("name_type", "serial_number", "workstation")
+    readonly_fields = ("date_of_creation", "date_of_change")
+    exclude = ("version_diff",)
+    inlines = [WorkEquipmentFileInline]
+
+    @admin.display(description="Средство измерений")
+    def measuring_device_display(self, obj):
+        if obj.measuring_device:
+            return mark_safe(
+                '<img src="/static/admin/img/icon-yes.svg" alt="Да">'
+            )
+        return "—"
+
+    def next_calibration_date_display(self, obj):
+        if not obj.next_calibration_date:
+            return "—"
+        return obj.next_calibration_date
+
+    next_calibration_date_display.short_description = "Дата плановой поверки"
+    next_calibration_date_display.admin_order_field = "next_calibration_date"
+
+    fieldsets = (
+        (None, {
+            "fields": (
+                "name_type",
+                "serial_number",
+                "measuring_device",
+                "next_calibration_date",
+                "workstation",
+                "replacement_allowed",
+            )
+        }),
+        ("Ответственные", {
+            "fields": (
+                "author",
+                "last_editor",
+                "current_responsible",
+                "note",
+            )
+        }),
+        ("Версия", {
+            "fields": (
+                "version",
+            )
+        }),
+        ("Системная информация", {
+            "fields": (
+                "date_of_creation",
+                "date_of_change",
+            )
+        }),
+    )
+
+# Кастомные колонки
+    def serial_number_link(self, obj):
+        if not obj.serial_number:
+            return "—"
+
+        url = reverse(
+            "admin:enterprise_asset_management_workequipment_change",
+            args=[obj.pk],
+        )
+        return format_html('<a href="{}">{}</a>', url, obj.serial_number)
+
+    serial_number_link.short_description = "Заводской номер (s/n)"
+    serial_number_link.admin_order_field = "serial_number"
+
+    def calibration_warning(self, obj):
+        if not obj.measuring_device or not obj.next_calibration_date:
+            return "—"
+
+        today = timezone.now().date()
+        days_left = (obj.next_calibration_date - today).days
+
+        if days_left <= 45:
+            return mark_safe(
+                '<span style="color: #f0ad4e; font-weight: bold;">⚠️</span>'
+            )
+
+        return "—"
+
+    calibration_warning.short_description = "Срок поверки истекает"
+
+# Транспорт
+@admin.register(TransportVehicle)
+class TransportVehicleAdmin(admin.ModelAdmin):
+    list_display = ("id", "name")
+    search_fields = ("name",)
+
+# Инфраструктура
+@admin.register(Infrastructure)
+class InfrastructureAdmin(admin.ModelAdmin):
+    list_display = ("id", "name")
+    search_fields = ("name",)
 
 
 class WorkAssignmentInline(admin.TabularInline):

@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'blog',
     'crm',
     'shared_repository',
+    'enterprise_asset_management',
 ]
 
 MIDDLEWARE = [
