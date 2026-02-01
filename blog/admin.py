@@ -6,7 +6,7 @@ from django.utils import timezone
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 import re
-from django.db.models import Q, F, Value, TextField
+from django.db.models import Q, F, Value, TextField, DateField, BooleanField, Case, When
 from functools import reduce
 from operator import and_, or_
 from django.forms.models import BaseInlineFormSet
@@ -410,6 +410,26 @@ class ProtocolTechnicalProposalAdmin(admin.ModelAdmin):
             obj.author = request.user
         obj.last_editor = request.user
         super().save_model(request, obj, form, change)
+
+class OverdueFilter(admin.SimpleListFilter):
+    title = "Просрочено?"
+    parameter_name = "overdue"
+
+    def lookups(self, request, model_admin):
+        return (
+            ("yes", "Просрочено"),
+            ("no", "Не просрочено"),
+        )
+
+    def queryset(self, request, queryset):
+        if self.value() == "yes":
+            return queryset.filter(is_overdue=True)
+
+        if self.value() == "no":
+            return queryset.filter(is_overdue=False)
+
+        return queryset
+
 
 class RevenueRangeFilter(admin.SimpleListFilter):
     title = 'Выручка'
@@ -1024,7 +1044,7 @@ class WorkAssignmentAdmin(admin.ModelAdmin):
         'deadline_version', 'reschedule_count', # служебные
     )
     search_fields = ('name','author__username','current_responsible__username')
-    list_filter = ('result','control_status')
+    list_filter = ('result','control_status', OverdueFilter)
 
     readonly_fields = ('date_of_creation','date_of_change',
                        'effective_deadline_readonly','deadline_version','reschedule_count')
@@ -1056,12 +1076,38 @@ class WorkAssignmentAdmin(admin.ModelAdmin):
         }),
     )
 
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+
+        today = timezone.localdate()
+
+        qs = qs.annotate(
+            effective_deadline_db=Case(
+                When(hard_deadline__isnull=False, then=F("hard_deadline")),
+                default=F("target_deadline"),
+                output_field=DateField(),
+            )
+        )
+
+        qs = qs.annotate(
+            is_overdue=Case(
+                When(
+                    Q(result__isnull=True) & Q(effective_deadline_db__lt=today),
+                    then=True
+                ),
+                default=False,
+                output_field=BooleanField(),
+            )
+        )
+
+        return qs
+
     def effective_deadline_readonly(self, obj):
         return obj.effective_deadline
     effective_deadline_readonly.short_description = "Эффективный срок"
 
     def overdue_flag(self, obj):
-        return "—" if obj.result else ("⚠️" if obj.is_overdue() else "—")
+        return "—" if obj.result else ("⚠️" if obj.is_overdue else "—")
     overdue_flag.short_description = "Просрочено?"
 
     def get_urls(self):
