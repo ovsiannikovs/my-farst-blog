@@ -14,8 +14,8 @@ from django.forms import ValidationError
 from django.contrib.contenttypes.admin import GenericTabularInline
 from django.contrib.contenttypes.forms import BaseGenericInlineFormSet
 
-from crm.models import Notifications, Customer, Decision_maker, Deal, Product, Deal_stage, Call, Letter, Company_branch, Meeting, MeetingFile, SupportTicket, TicketComment, KnowledgeBaseArticle
-from crm.forms import TicketCommentForm, KnowledgeBaseArticleForm, SupportTicketForm
+from crm.models import Notifications, Customer, Decision_maker, Deal, Product, Deal_stage, Call, Letter, Company_branch, Meeting, MeetingFile, SupportTicket, TicketComment
+from crm.forms import TicketCommentForm, SupportTicketForm
 from shared_repository.models import SharedRepository
 from enterprise_asset_management.models import WorkEquipment, WorkEquipmentFile, TransportVehicle, Infrastructure
 from shared_repository.models import SharedRepository, IndependentDocumentAcceptSignature
@@ -535,6 +535,30 @@ class CallAdmin(admin.ModelAdmin):
     # для экономии запросов в changelist
     list_select_related = ('customer', 'decision_maker')
 
+    def display_customer(self, obj):
+        """Заказчик с твоим форматированием"""
+        if obj.customer and obj.customer.name_of_company:
+            return format_html(
+                '<div style="min-width: 150px; max-width: 600px; white-space: normal; word-wrap: break-word; padding: 5px;">{}</div>',
+                obj.customer.name_of_company
+            )
+        return "—"
+
+    def display_decision_maker(self, obj):
+        """ЛПР с твоим форматированием"""
+        if obj.decision_maker and obj.decision_maker.full_name:
+            return format_html(
+                '<div style="min-width: 150px; max-width: 600px; white-space: normal; word-wrap: break-word; padding: 5px;">{}</div>',
+                obj.decision_maker.full_name
+            )
+        return "—"
+
+    display_decision_maker.short_description = 'ЛПР'
+    display_decision_maker.admin_order_field = 'decision_maker__full_name'
+
+    display_customer.short_description = 'Заказчик'
+    display_customer.admin_order_field = 'customer__name_of_company'
+
     def _get_attr_chain(self, obj, dotted):
         """Достаёт значение по цепочке 'customer__name_of_company'."""
         cur = obj
@@ -641,6 +665,30 @@ class MeetingAdmin(admin.ModelAdmin):
             'fields': ('status', 'goal_description', 'result_description')
         }),
     )
+
+    def display_customer(self, obj):
+        """Заказчик с твоим форматированием"""
+        if obj.customer and obj.customer.name_of_company:
+            return format_html(
+                '<div style="min-width: 150px; max-width: 600px; white-space: normal; word-wrap: break-word; padding: 5px;">{}</div>',
+                obj.customer.name_of_company
+            )
+        return "—"
+
+    display_customer.short_description = 'Заказчик'
+    display_customer.admin_order_field = 'customer__name_of_company'
+
+    def display_decision_maker(self, obj):
+        """ЛПР с твоим форматированием"""
+        if obj.decision_maker and obj.decision_maker.full_name:
+            return format_html(
+                '<div style="min-width: 150px; max-width: 600px; white-space: normal; word-wrap: break-word; padding: 5px;">{}</div>',
+                obj.decision_maker.full_name
+            )
+        return "—"
+
+    display_decision_maker.short_description = 'ЛПР'
+    display_decision_maker.admin_order_field = 'decision_maker__full_name'
 
     def save_model(self, request, obj, form, change):
         # Автоматически подставляем ЛПР заказчика, если не выбран
@@ -758,65 +806,6 @@ class SupportTicketAdmin(admin.ModelAdmin):
         return super().get_queryset(request).select_related(
             'customer', 'product', 'created_by', 'assigned_to'
         )
-
-
-# База знаний
-@admin.register(KnowledgeBaseArticle)
-class KnowledgeBaseArticleAdmin(admin.ModelAdmin):
-    form = KnowledgeBaseArticleForm
-    list_display = [
-        'title', 'get_category_display', 'created_date', 'updated_date',
-        'author', 'status_badge', 'custom_actions'
-    ]
-    list_filter = ['status', 'category', 'created_date', 'author']
-    search_fields = ['title', 'content', 'author__username']
-    readonly_fields = ['created_date', 'updated_date', 'author']
-    list_per_page = 25
-
-    fieldsets = (
-        ('Основная информация', {
-            'fields': ('title', 'category', 'status')
-        }),
-        ('Содержание', {
-            'fields': ('content', 'file')
-        }),
-        ('Системная информация', {
-            'fields': ('author', 'created_date', 'updated_date'),
-            'classes': ('collapse',)
-        }),
-    )
-
-    def status_badge(self, obj):
-        status_colors = {
-            'draft': 'gray',
-            'published': 'green',
-            'archived': 'red'
-        }
-        color = status_colors.get(obj.status, 'gray')
-        return format_html(
-            '<span style="background-color: {}; color: white; padding: 2px 6px; border-radius: 3px;">{}</span>',
-            color, obj.get_status_display()
-        )
-
-    status_badge.short_description = 'Статус'
-
-    def custom_actions(self, obj):
-        view_url = reverse('admin:crm_knowledgebasearticle_change', args=[obj.id])
-        return format_html(
-            '<a href="{}">👁️ Просмотр</a>',
-            view_url
-        )
-
-    custom_actions.short_description = 'Действия'
-
-    def save_model(self, request, obj, form, change):
-        if not obj.pk:
-            obj.author = request.user
-        super().save_model(request, obj, form, change)
-
-    def get_queryset(self, request):
-        return super().get_queryset(request).select_related('author')
-
 
 # Комментарии (отдельная регистрация для полного управления)
 @admin.register(TicketComment)
@@ -1449,6 +1438,7 @@ class SharedRepositoryAdmin(admin.ModelAdmin):
         'display_version',
         'display_uploaded_file',
         'display_document_purpose',
+        'display_note',
     ]
 
     list_filter = [
@@ -1462,6 +1452,7 @@ class SharedRepositoryAdmin(admin.ModelAdmin):
     search_fields = [
         'document_title',
         'document_purpose',
+        'note',
         'id',
     ]
 
@@ -1485,6 +1476,7 @@ class SharedRepositoryAdmin(admin.ModelAdmin):
                 'uploaded_file',
                 #'display_file_info',
                 'document_purpose',
+                'note',
             )
         }),
         ('Утверждение', {
@@ -1547,9 +1539,9 @@ class SharedRepositoryAdmin(admin.ModelAdmin):
     display_approval.admin_order_field = 'approval__username'
 
     def display_date_approval(self, obj):
-        """Отображение даты и времени утверждения """
+        """Отображение даты утверждения """
         if obj.date_approval:
-            return obj.date_approval.strftime('%Y-%m-%d %H:%M:%S')
+            return obj.date_approval.strftime('%Y-%m-%d')
         return "—"
 
     display_date_approval.short_description = 'Дата утверждения'
@@ -1607,10 +1599,26 @@ class SharedRepositoryAdmin(admin.ModelAdmin):
     def display_document_purpose(self, obj):
         """Отображение назначения документа"""
         if obj.document_purpose:
-            return obj.document_purpose[:50] + '...' if len(obj.document_purpose) > 50 else obj.document_purpose
+            # Показываем текст полностью с переносом
+            return format_html(
+                '<div style="min-width: 150px; max-width: 600px; white-space: normal; word-wrap: break-word; padding: 5px;">{}</div>',
+                obj.document_purpose
+            )
         return "—"
 
     display_document_purpose.short_description = 'Назначение'
+
+    def display_note(self, obj):
+        """Отображение примечания"""
+        if obj.note:
+            return format_html(
+                '<div style="min-width: 150px; max-width: 600px; white-space: normal; word-wrap: break-word; padding: 5px;">{}</div>',
+                obj.note
+            )
+        return "—"
+
+    display_note.short_description = 'Примечание'
+    display_note.admin_order_field = 'note'
 
     def uploaded_file_info(self, obj):
         """Информация о файле для детального просмотра"""
@@ -1663,6 +1671,7 @@ class SharedRepositoryAdmin(admin.ModelAdmin):
             'version': 'Цифры, 3 символа max. Значение по умолчанию: 1',
             'uploaded_file': 'Подгружаем только один файл',
             'document_purpose': 'Все текстовые символы - 5000 символов max',
+            'note': 'Дополнительные заметки и комментарии',
         }
 
         for field_name, help_text in help_texts.items():
