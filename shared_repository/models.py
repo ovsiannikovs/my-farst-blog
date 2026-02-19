@@ -24,7 +24,7 @@ class SharedRepository(models.Model):
 
     # 2. Категория
     CATEGORY_CHOICES = [
-        ('ОД', 'Отдельные документы'),
+        ('ОД', 'ОД'),
     ]
 
     category = models.CharField(
@@ -65,11 +65,11 @@ class SharedRepository(models.Model):
     )
 
     # 6. Дата утверждения
-    date_approval = models.DateTimeField(
-        verbose_name='Дата и время утверждения',
+    date_approval = models.DateField(
+        verbose_name='Дата утверждения',
         blank=True,
         null=True,
-        help_text='Дата и время утверждения документа'
+        help_text='Дата утверждения документа'
     )
 
     # 7. Ознакомление
@@ -162,6 +162,14 @@ class SharedRepository(models.Model):
         blank=True,
         null=True,
         help_text='Все текстовые символы - 5000 символов max'
+    )
+    # 17. Примечание документа
+    note = models.TextField(
+        max_length=5000,
+        verbose_name='Примечание',
+        blank=True,
+        null=True,
+        help_text='Дополнительные заметки и комментарии'
     )
 
     class Meta:
