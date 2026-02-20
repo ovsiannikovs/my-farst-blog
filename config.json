@@ -1,0 +1,10 @@
+{
+    "database": {
+    "engine": "django.db.backends.postgresql_psycopg2",
+    "name": "spmlc_python",
+    "user": "spmlc",
+    "password": "wuebg139JJ013",
+    "host": "localhost",
+    "port": "5432"
+  }
+}
